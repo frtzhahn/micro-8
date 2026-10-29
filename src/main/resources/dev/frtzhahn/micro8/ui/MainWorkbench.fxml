@@ -7,7 +7,6 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
@@ -16,256 +15,326 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.web.WebView?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/25"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="dev.frtzhahn.micro8.ui.MainWorkbenchController"
-            styleClass="root-workbench"
+            styleClass="workbench"
             prefWidth="1440.0" prefHeight="900.0">
 
     <top>
-        <HBox spacing="8.0" alignment="CENTER_LEFT" styleClass="panel-card">
-            <padding>
-                <Insets top="8.0" right="12.0" bottom="8.0" left="12.0"/>
-            </padding>
-            <BorderPane.margin>
-                <Insets top="8.0" right="8.0" bottom="4.0" left="8.0"/>
-            </BorderPane.margin>
+        <HBox styleClass="toolbar">
+            <Label text="MICRO-8" styleClass="toolbar__brand"/>
+            <Button fx:id="btnAssemble" text="Assemble" styleClass="button--outline" onAction="#handleAssemble">
+                <graphic><FontIcon iconLiteral="fth-tool"/></graphic>
+                <tooltip><Tooltip text="Assemble source into RAM (F5)"/></tooltip>
+            </Button>
 
-            <Label text="MICRO-8" styleClass="workbench-title"/>
-            <Button fx:id="btnAssemble" text="Assemble" onAction="#handleAssemble"/>
+            <Region styleClass="toolbar__divider"/>
 
-            <Separator orientation="VERTICAL"/>
+            <HBox styleClass="toolbar__group">
+                <Button fx:id="btnRun" styleClass="button--icon, button--primary" onAction="#handleRun">
+                    <graphic><FontIcon iconLiteral="fth-play"/></graphic>
+                    <tooltip><Tooltip text="Run (F8)"/></tooltip>
+                </Button>
+                <Button fx:id="btnPause" styleClass="button--icon" onAction="#handlePause">
+                    <graphic><FontIcon iconLiteral="fth-pause"/></graphic>
+                    <tooltip><Tooltip text="Pause (F8)"/></tooltip>
+                </Button>
+                <Button fx:id="btnStepMicro" styleClass="button--icon" onAction="#handleStepMicro">
+                    <graphic><FontIcon iconLiteral="fth-chevron-right"/></graphic>
+                    <tooltip><Tooltip text="Step one T-state (F6)"/></tooltip>
+                </Button>
+                <Button fx:id="btnStepMacro" styleClass="button--icon" onAction="#handleStepMacro">
+                    <graphic><FontIcon iconLiteral="fth-chevrons-right"/></graphic>
+                    <tooltip><Tooltip text="Step one instruction (F7)"/></tooltip>
+                </Button>
+            </HBox>
 
-            <Button fx:id="btnRun" text="Run" onAction="#handleRun"/>
-            <Button fx:id="btnPause" text="Pause" onAction="#handlePause"/>
-            <Button fx:id="btnStepMicro" text="Step Micro" onAction="#handleStepMicro"/>
-            <Button fx:id="btnStepMacro" text="Step Macro" onAction="#handleStepMacro"/>
+            <Region styleClass="toolbar__divider"/>
 
-            <Separator orientation="VERTICAL"/>
+            <HBox styleClass="toolbar__group">
+                <Button fx:id="btnUndoMicro" styleClass="button--icon" onAction="#handleUndoMicro">
+                    <graphic><FontIcon iconLiteral="fth-chevron-left"/></graphic>
+                    <tooltip><Tooltip text="Undo one T-state (F9)"/></tooltip>
+                </Button>
+                <Button fx:id="btnUndoMacro" styleClass="button--icon" onAction="#handleUndoMacro">
+                    <graphic><FontIcon iconLiteral="fth-chevrons-left"/></graphic>
+                    <tooltip><Tooltip text="Undo one instruction (F10)"/></tooltip>
+                </Button>
+                <Button fx:id="btnReset" styleClass="button--icon" onAction="#handleReset">
+                    <graphic><FontIcon iconLiteral="fth-rotate-ccw"/></graphic>
+                    <tooltip><Tooltip text="Reset CPU (Ctrl+R)"/></tooltip>
+                </Button>
+            </HBox>
 
-            <Button fx:id="btnUndoMicro" text="Undo Micro" onAction="#handleUndoMicro"/>
-            <Button fx:id="btnUndoMacro" text="Undo Macro" onAction="#handleUndoMacro"/>
-            <Button fx:id="btnReset" text="Reset" onAction="#handleReset"/>
+            <Region styleClass="toolbar__divider"/>
 
-            <Separator orientation="VERTICAL"/>
-
-            <Label text="Clock:"/>
-            <Slider fx:id="sldClockHz" min="1.0" max="1000.0" value="100.0" prefWidth="130.0"/>
-            <Label fx:id="lblClockHz" text="100 Hz" minWidth="64.0"/>
-
-            <Separator orientation="VERTICAL"/>
-
-            <Label text="Cycles:"/>
-            <Label fx:id="lblCycleCount" text="00000" minWidth="56.0"/>
+            <HBox styleClass="toolbar__stat">
+                <FontIcon iconLiteral="fth-clock"/>
+                <Slider fx:id="sldClockHz" min="1.0" max="1000.0" value="100.0" prefWidth="120.0"/>
+                <Label fx:id="lblClockHz" text="100 Hz" styleClass="toolbar__value" minWidth="64.0"/>
+            </HBox>
+            <HBox styleClass="toolbar__stat">
+                <FontIcon iconLiteral="fth-activity"/>
+                <Label fx:id="lblCycleCount" text="00000" styleClass="toolbar__value"/>
+                <Label text="cycles" styleClass="toolbar__unit"/>
+            </HBox>
 
             <Region HBox.hgrow="ALWAYS"/>
 
-            <Button fx:id="btnSnapshots" text="Snapshots" onAction="#handleSnapshots"/>
-            <Button fx:id="btnHelpOnboarding" text="Quickstart" onAction="#handleHelpOnboarding"/>
+            <Button fx:id="btnSnapshots" text="Snapshots" onAction="#handleSnapshots">
+                <graphic><FontIcon iconLiteral="fth-bookmark"/></graphic>
+                <tooltip><Tooltip text="Save and restore workspace snapshots"/></tooltip>
+            </Button>
+            <Button fx:id="btnHelpOnboarding" styleClass="button--icon" onAction="#handleHelpOnboarding">
+                <graphic><FontIcon iconLiteral="fth-help-circle"/></graphic>
+                <tooltip><Tooltip text="Quickstart tour"/></tooltip>
+            </Button>
         </HBox>
     </top>
 
     <center>
-        <SplitPane dividerPositions="0.26, 0.70" styleClass="workbench-split">
-            <BorderPane.margin>
-                <Insets top="4.0" right="8.0" bottom="4.0" left="8.0"/>
-            </BorderPane.margin>
+        <SplitPane dividerPositions="0.24, 0.71">
 
-            <VBox spacing="8.0" styleClass="panel-card">
-                <padding>
-                    <Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/>
-                </padding>
-                <Label text="ASSEMBLY STUDIO" styleClass="section-header"/>
-                <StackPane fx:id="paneCodeHost" VBox.vgrow="ALWAYS" styleClass="panel-subcard"/>
-                <Label text="SYMBOL TABLE" styleClass="section-header"/>
-                <TableView fx:id="tblSymbolTable" prefHeight="135.0" styleClass="workbench-table"/>
-                <Label fx:id="lblAsmDiagnostics" text="Ready." wrapText="true" styleClass="diagnostics-banner"/>
+            <VBox styleClass="panel">
+                <HBox styleClass="panel__head">
+                    <FontIcon iconLiteral="fth-code"/>
+                    <Label text="Assembly" styleClass="panel__title"/>
+                </HBox>
+                <StackPane fx:id="paneCodeHost" VBox.vgrow="ALWAYS"/>
+                <Region styleClass="rule"/>
+                <HBox styleClass="panel__head">
+                    <FontIcon iconLiteral="fth-hash"/>
+                    <Label text="Symbols" styleClass="panel__title"/>
+                </HBox>
+                <TableView fx:id="tblSymbolTable" prefHeight="118.0"/>
+                <Label fx:id="lblAsmDiagnostics" text="Ready." wrapText="true" maxWidth="Infinity" styleClass="status">
+                    <graphic><FontIcon iconLiteral="fth-check-circle"/></graphic>
+                </Label>
             </VBox>
 
-            <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="panel-card">
+            <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="panel">
                 <Tab text="CPU">
-                    <VBox spacing="8.0">
-                        <padding>
-                            <Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/>
-                        </padding>
-                        <FlowPane hgap="12.0" vgap="6.0" alignment="CENTER_LEFT">
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="BUS:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblBusValue" text="0x00" styleClass="wire-active-driver" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="T-STATE:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblTState" text="T0" styleClass="tstate-pill-active" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="FLAGS:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblFlags" text="Z:0 C:0" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="PC:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblPc" text="0x00" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="MAR:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblMar" text="0x00" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="IR:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblIr" text="0x00" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="REG A:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblRegA" text="0x00" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="REG B:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblRegB" text="0x00" minWidth="-Infinity"/>
-                            </HBox>
-                            <HBox spacing="4.0" alignment="CENTER_LEFT">
-                                <Label text="ALU:" styleClass="section-header" minWidth="-Infinity"/>
-                                <Label fx:id="lblAlu" text="0x00" minWidth="-Infinity"/>
-                            </HBox>
-                        </FlowPane>
-                        <StackPane fx:id="paneSchematicHost" VBox.vgrow="ALWAYS" styleClass="panel-subcard"/>
+                    <graphic><FontIcon iconLiteral="fth-cpu"/></graphic>
+                    <VBox>
+                        <HBox styleClass="reg-strip">
+                            <padding>
+                                <Insets top="12.0" right="14.0" bottom="12.0" left="14.0"/>
+                            </padding>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="Bus" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblBusValue" text="0x00" styleClass="reg-tile__value, reg-tile__value--blue" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="T-state" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblTState" text="T0" styleClass="reg-tile__value, reg-tile__value--blue" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="Flags" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblFlags" text="Z0 C0" styleClass="reg-tile__value" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="PC" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblPc" text="0x00" styleClass="reg-tile__value" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="MAR" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblMar" text="0x00" styleClass="reg-tile__value, reg-tile__value--yellow" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="IR" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblIr" text="0x00" styleClass="reg-tile__value" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="A" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblRegA" text="0x00" styleClass="reg-tile__value" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="B" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblRegB" text="0x00" styleClass="reg-tile__value" minWidth="-Infinity"/>
+                            </VBox>
+                            <VBox styleClass="reg-tile" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Label text="ALU" styleClass="reg-tile__label"/>
+                                <Label fx:id="lblAlu" text="0x00" styleClass="reg-tile__value" minWidth="-Infinity"/>
+                            </VBox>
+                        </HBox>
+                        <StackPane fx:id="paneSchematicHost" VBox.vgrow="ALWAYS">
+                            <VBox.margin>
+                                <Insets top="12.0" right="14.0" bottom="10.0" left="14.0"/>
+                            </VBox.margin>
+                        </StackPane>
                     </VBox>
                 </Tab>
                 <Tab text="Microcode">
-                    <VBox spacing="8.0">
-                        <padding>
-                            <Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/>
-                        </padding>
+                    <graphic><FontIcon iconLiteral="fth-sliders"/></graphic>
+                    <VBox styleClass="panel__body, panel__body--top">
                         <HBox spacing="8.0" alignment="CENTER_LEFT">
-                            <Label text="CONTROL-STORE MICROCODE DESIGNER" styleClass="section-header"/>
+                            <Label text="Microcode designer" styleClass="panel__title"/>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <MenuButton fx:id="btnSelectInstruction" text="Load Instruction"/>
+                            <MenuButton fx:id="btnSelectInstruction" text="Load instruction"/>
                         </HBox>
                         <HBox spacing="8.0" alignment="CENTER_LEFT">
-                            <Label text="Opcode (Hex):"/>
-                            <TextField fx:id="txtOpcodeHex" text="0x20" prefWidth="72.0"/>
-                            <Label text="Mnemonic:"/>
-                            <TextField fx:id="txtMnemonic" text="ADD" prefWidth="92.0"/>
-                            <CheckBox fx:id="chkHasOperand" text="Has 8-Bit Operand" selected="true"/>
+                            <Label text="Opcode" styleClass="field-label"/>
+                            <TextField fx:id="txtOpcodeHex" text="0x20" prefWidth="72.0" styleClass="mono"/>
+                            <Label text="Mnemonic" styleClass="field-label"/>
+                            <TextField fx:id="txtMnemonic" text="ADD" prefWidth="92.0" styleClass="mono"/>
+                            <CheckBox fx:id="chkHasOperand" text="Has 8-bit operand" selected="true"/>
                         </HBox>
                         <HBox spacing="8.0" alignment="CENTER_LEFT">
-                            <Label text="Description:"/>
+                            <Label text="Description" styleClass="field-label"/>
                             <TextField fx:id="txtInstrDesc" text="Add RAM byte at operand address to Register A (updates Z, C)" HBox.hgrow="ALWAYS"/>
                         </HBox>
                         <HBox spacing="6.0" alignment="CENTER_LEFT">
                             <fx:define>
                                 <ToggleGroup fx:id="flagVariantGroup"/>
                             </fx:define>
-                            <Label text="Flag Variant:" styleClass="section-header"/>
-                            <ToggleButton fx:id="btnFlagAll" text="All Flags [0..3]" selected="true" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
-                            <ToggleButton fx:id="btnFlag0" text="Z=0, C=0 [0]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
-                            <ToggleButton fx:id="btnFlag1" text="Z=1, C=0 [1]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
-                            <ToggleButton fx:id="btnFlag2" text="Z=0, C=1 [2]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
-                            <ToggleButton fx:id="btnFlag3" text="Z=1, C=1 [3]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
+                            <Label text="Flag variant" styleClass="field-label"/>
+                            <ToggleButton fx:id="btnFlagAll" text="All [0..3]" selected="true" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
+                            <ToggleButton fx:id="btnFlag0" text="Z0 C0 [0]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
+                            <ToggleButton fx:id="btnFlag1" text="Z1 C0 [1]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
+                            <ToggleButton fx:id="btnFlag2" text="Z0 C1 [2]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
+                            <ToggleButton fx:id="btnFlag3" text="Z1 C1 [3]" toggleGroup="$flagVariantGroup" onAction="#handleFlagVariantChanged"/>
                         </HBox>
-                        <Label text="6-PHASE T-STATE CONTROL MATRIX (T0 - T5)" styleClass="section-header"/>
-                        <TableView fx:id="tblMicrocode" VBox.vgrow="ALWAYS" styleClass="workbench-table"/>
-                        <Label fx:id="lblMicrocodeValidation" text="OK - Zero Bus Contention Detected" wrapText="true" styleClass="diagnostics-banner"/>
+                        <Label text="T-state control matrix (T0 - T5)" styleClass="panel__title"/>
+                        <TableView fx:id="tblMicrocode" VBox.vgrow="ALWAYS"/>
+                        <Label fx:id="lblMicrocodeValidation" text="No bus contention" wrapText="true" maxWidth="Infinity" styleClass="status, status--boxed">
+                            <graphic><FontIcon iconLiteral="fth-check-circle"/></graphic>
+                        </Label>
                         <HBox spacing="8.0" alignment="CENTER_RIGHT">
-                            <Button fx:id="btnSaveMicrocode" text="Save Microcode" onAction="#handleSaveMicrocode"/>
-                            <Button fx:id="btnResetDefaultIsa" text="Reset Default ISA" onAction="#handleResetDefaultIsa"/>
+                            <Button fx:id="btnResetDefaultIsa" text="Reset default ISA" styleClass="button--outline" onAction="#handleResetDefaultIsa">
+                                <graphic><FontIcon iconLiteral="fth-rotate-ccw"/></graphic>
+                            </Button>
+                            <Button fx:id="btnSaveMicrocode" text="Save microcode" styleClass="button--outline" onAction="#handleSaveMicrocode">
+                                <graphic><FontIcon iconLiteral="fth-save"/></graphic>
+                            </Button>
                         </HBox>
                     </VBox>
                 </Tab>
                 <Tab text="ISA">
-                    <VBox spacing="8.0">
-                        <padding>
-                            <Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/>
-                        </padding>
+                    <graphic><FontIcon iconLiteral="fth-book-open"/></graphic>
+                    <VBox styleClass="panel__body, panel__body--top">
                         <HBox spacing="8.0" alignment="CENTER_LEFT">
-                            <Label text="LIVE SQLITE ISA DATASHEET" styleClass="section-header"/>
+                            <Label text="ISA datasheet" styleClass="panel__title"/>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Button fx:id="btnRefreshDatasheet" text="Refresh Datasheet" onAction="#handleRefreshDatasheet"/>
+                            <Button fx:id="btnRefreshDatasheet" text="Refresh" styleClass="button--outline" onAction="#handleRefreshDatasheet">
+                                <graphic><FontIcon iconLiteral="fth-refresh-cw"/></graphic>
+                            </Button>
                         </HBox>
                         <WebView fx:id="webDatasheet" VBox.vgrow="ALWAYS"/>
                     </VBox>
                 </Tab>
                 <Tab text="Labs">
-                    <VBox spacing="8.0">
-                        <padding>
-                            <Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/>
-                        </padding>
+                    <graphic><FontIcon iconLiteral="fth-check-square"/></graphic>
+                    <VBox styleClass="panel__body, panel__body--top">
                         <HBox spacing="8.0" alignment="CENTER_LEFT">
-                            <Label text="CLEAN-SLATE LAB CHALLENGES" styleClass="section-header"/>
+                            <Label text="Lab challenges" styleClass="panel__title"/>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Button fx:id="btnLoadLabStarter" text="Load Starter Code" onAction="#handleLoadLabStarter"/>
-                            <Button fx:id="btnRunLabGrader" text="Run Lab Grader" onAction="#handleRunLabGrader"/>
+                            <Button fx:id="btnLoadLabStarter" text="Load starter code" styleClass="button--outline" onAction="#handleLoadLabStarter">
+                                <graphic><FontIcon iconLiteral="fth-file-text"/></graphic>
+                            </Button>
+                            <Button fx:id="btnRunLabGrader" text="Run grader" styleClass="button--outline" onAction="#handleRunLabGrader">
+                                <graphic><FontIcon iconLiteral="fth-check-square"/></graphic>
+                            </Button>
                         </HBox>
-                        <TableView fx:id="tblLabs" prefHeight="155.0" styleClass="workbench-table"/>
-                        <Label fx:id="lblLabReport" text="Select a lab challenge to begin." wrapText="true" styleClass="diagnostics-banner"/>
-                        <Label text="DETERMINISTIC TEST SUITE RESULTS" styleClass="section-header"/>
-                        <TableView fx:id="tblLabResults" VBox.vgrow="ALWAYS" styleClass="workbench-table"/>
+                        <TableView fx:id="tblLabs" prefHeight="155.0"/>
+                        <Label fx:id="lblLabReport" text="Select a lab challenge to begin." wrapText="true" maxWidth="Infinity" styleClass="status, status--boxed">
+                            <graphic><FontIcon iconLiteral="fth-check-circle"/></graphic>
+                        </Label>
+                        <Label text="Test results" styleClass="panel__title"/>
+                        <TableView fx:id="tblLabResults" VBox.vgrow="ALWAYS"/>
                     </VBox>
                 </Tab>
             </TabPane>
 
-            <VBox spacing="8.0" styleClass="panel-card">
-                <padding>
-                    <Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/>
-                </padding>
-                <Label text="OUTPUT REGISTER (outReg)" styleClass="section-header"/>
-                <HBox spacing="12.0" alignment="CENTER_LEFT">
-                    <SevenSegmentCanvas fx:id="segOutHigh"/>
-                    <SevenSegmentCanvas fx:id="segOutLow"/>
-                    <VBox spacing="4.0" alignment="CENTER_LEFT">
-                        <Label text="UNSIGNED DEC / HEX / ASCII:" styleClass="section-header"/>
-                        <Label fx:id="lblOutReg" text="Dec: 000 | Hex: 0x00 | ASC: '.'"/>
-                    </VBox>
+            <VBox styleClass="panel">
+                <HBox styleClass="panel__head">
+                    <FontIcon iconLiteral="fth-monitor"/>
+                    <Label text="Output" styleClass="panel__title"/>
                 </HBox>
-                <Label text="Binary LEDs (Bit 7 .. Bit 0):" styleClass="section-header"/>
-                <StackPane fx:id="paneBinaryLedsHost" alignment="CENTER_LEFT"/>
-                <Separator/>
-                <HBox spacing="8.0" alignment="CENTER_LEFT">
-                    <Label text="16x16 RAM HEX GRID (256B)" styleClass="section-header"/>
+                <HBox spacing="18.0" alignment="CENTER_LEFT">
+                    <padding>
+                        <Insets right="14.0" bottom="12.0" left="14.0"/>
+                    </padding>
+                    <HBox styleClass="seg-display">
+                        <SevenSegmentCanvas fx:id="segOutHigh"/>
+                        <SevenSegmentCanvas fx:id="segOutLow"/>
+                    </HBox>
+                    <GridPane hgap="14.0" vgap="4.0">
+                        <Label text="Dec" styleClass="out-meta__key" GridPane.rowIndex="0"/>
+                        <Label fx:id="lblOutDec" text="000" styleClass="out-meta__value" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                        <Label text="Hex" styleClass="out-meta__key" GridPane.rowIndex="1"/>
+                        <Label fx:id="lblOutHex" text="0x00" styleClass="out-meta__value" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="ASCII" styleClass="out-meta__key" GridPane.rowIndex="2"/>
+                        <Label fx:id="lblOutAscii" text="'.'" styleClass="out-meta__value" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                    </GridPane>
+                </HBox>
+                <StackPane fx:id="paneBinaryLedsHost" alignment="CENTER_LEFT">
+                    <padding>
+                        <Insets right="14.0" bottom="14.0" left="14.0"/>
+                    </padding>
+                </StackPane>
+                <Region styleClass="rule"/>
+                <HBox styleClass="panel__head">
+                    <FontIcon iconLiteral="fth-grid"/>
+                    <Label text="Memory" styleClass="panel__title"/>
+                    <Label text="256 B" styleClass="panel__note"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="btnClearRam" text="Clear RAM" onAction="#handleClearRam"/>
-                    <Button fx:id="btnLoadHex" text="Load Hex" onAction="#handleLoadHex"/>
+                    <Button fx:id="btnLoadHex" styleClass="button--icon, button--sm" onAction="#handleLoadHex">
+                        <graphic><FontIcon iconLiteral="fth-upload"/></graphic>
+                        <tooltip><Tooltip text="Load hex bytes into RAM"/></tooltip>
+                    </Button>
+                    <Button fx:id="btnClearRam" styleClass="button--icon, button--sm" onAction="#handleClearRam">
+                        <graphic><FontIcon iconLiteral="fth-trash-2"/></graphic>
+                        <tooltip><Tooltip text="Clear RAM"/></tooltip>
+                    </Button>
                 </HBox>
-                <HBox spacing="12.0" alignment="CENTER_LEFT">
-                    <Label text="PC = Cyan" styleClass="ram-cell-pc"/>
-                    <Label text="MAR = Gold" styleClass="ram-cell-mar"/>
-                    <Label text="(Click cell when paused to poke)" styleClass="section-header"/>
-                </HBox>
-                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="panel-subcard">
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                     <content>
                         <StackPane fx:id="paneRamGridHost" alignment="TOP_LEFT">
                             <padding>
-                                <Insets top="6.0" right="6.0" bottom="6.0" left="6.0"/>
+                                <Insets right="14.0" left="14.0"/>
                             </padding>
                         </StackPane>
                     </content>
                 </ScrollPane>
+                <HBox styleClass="legend">
+                    <padding>
+                        <Insets top="10.0" right="14.0" bottom="12.0" left="14.0"/>
+                    </padding>
+                    <Label text="PC">
+                        <graphic><Region styleClass="legend__swatch, legend__swatch--pc"/></graphic>
+                    </Label>
+                    <Label text="MAR">
+                        <graphic><Region styleClass="legend__swatch, legend__swatch--mar"/></graphic>
+                    </Label>
+                    <Label text="Click a cell while paused to edit"/>
+                </HBox>
             </VBox>
         </SplitPane>
     </center>
 
     <bottom>
-        <VBox spacing="6.0" prefHeight="195.0" styleClass="panel-card">
-            <padding>
-                <Insets top="8.0" right="12.0" bottom="8.0" left="12.0"/>
-            </padding>
-            <BorderPane.margin>
-                <Insets top="4.0" right="8.0" bottom="8.0" left="8.0"/>
-            </BorderPane.margin>
-
-            <HBox spacing="8.0" alignment="CENTER_LEFT">
-                <Label text="EXECUTION TRACE MONITOR" styleClass="section-header"/>
+        <VBox styleClass="panel, panel--trace" prefHeight="196.0">
+            <HBox styleClass="panel__head">
+                <FontIcon iconLiteral="fth-list"/>
+                <Label text="Trace" styleClass="panel__title"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="btnClearTrace" text="Clear Trace" onAction="#handleClearTrace"/>
+                <Button fx:id="btnClearTrace" styleClass="button--icon, button--sm" onAction="#handleClearTrace">
+                    <graphic><FontIcon iconLiteral="fth-trash-2"/></graphic>
+                    <tooltip><Tooltip text="Clear trace"/></tooltip>
+                </Button>
             </HBox>
-            <TableView fx:id="tblTrace" VBox.vgrow="ALWAYS" styleClass="workbench-table"/>
+            <TableView fx:id="tblTrace" VBox.vgrow="ALWAYS"/>
         </VBox>
     </bottom>
 

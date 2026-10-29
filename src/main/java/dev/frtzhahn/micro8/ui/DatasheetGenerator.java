@@ -9,7 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Generates a self-contained dark-themed HTML ISA and microcode datasheet from SQLite state.
+ * Generates a self-contained HTML ISA and microcode datasheet from SQLite state, styled with the shared {@link Theme}.
  */
 public final class DatasheetGenerator {
 
@@ -35,110 +35,102 @@ public final class DatasheetGenerator {
                 <meta charset="UTF-8">
                 <title>MICRO-8 ISA Datasheet</title>
                 <style>
+                    :root { /*PALETTE*/ }
                     body {
-                        background-color: #111318;
-                        color: #E2E8F0;
-                        font-family: "JetBrains Mono", "Consolas", monospace;
+                        background-color: var(--bg);
+                        color: var(--text);
+                        font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
                         font-size: 12px;
-                        margin: 14px;
+                        margin: 0 0 14px 0;
+                    }
+                    h1, h2 {
+                        font-family: "Segoe UI", system-ui, sans-serif;
+                        font-weight: bold;
                     }
                     h1 {
-                        color: #00E5FF;
-                        font-size: 16px;
-                        margin: 0 0 6px 0;
+                        font-size: 14px;
+                        margin: 0 0 4px 0;
                     }
                     h2 {
-                        color: #94A3B8;
-                        font-size: 13px;
-                        margin: 16px 0 8px 0;
-                        border-bottom: 1px solid #2A2F3A;
-                        padding-bottom: 4px;
+                        color: var(--muted);
+                        font-size: 12px;
+                        margin: 18px 0 8px 0;
                     }
                     .subtitle {
-                        color: #94A3B8;
+                        color: var(--muted);
                         margin-bottom: 12px;
                     }
                     table {
                         width: 100%;
                         border-collapse: collapse;
-                        background-color: #1A1D24;
-                        border: 1px solid #2A2F3A;
                         margin-bottom: 14px;
                     }
                     th {
-                        background-color: #242936;
-                        color: #94A3B8;
+                        color: var(--faint);
+                        font-weight: normal;
                         text-align: left;
                         padding: 6px 8px;
-                        border-bottom: 1px solid #2A2F3A;
+                        border-bottom: 1px solid var(--line);
                     }
                     td {
                         padding: 6px 8px;
-                        border-bottom: 1px solid #242936;
+                        border-bottom: 1px solid var(--line);
                         vertical-align: top;
                     }
                     .card {
-                        background-color: #1A1D24;
-                        border: 1px solid #2A2F3A;
-                        border-radius: 6px;
+                        background-color: var(--surface);
+                        border: 1px solid var(--line);
+                        border-radius: 8px;
                         padding: 10px 12px;
                         margin-bottom: 12px;
                     }
                     .card-header {
                         font-weight: bold;
-                        color: #00E5FF;
                         margin-bottom: 6px;
                     }
-                    .badge-builtin {
-                        background-color: #1E3A5F;
-                        color: #00E5FF;
-                        padding: 1px 6px;
-                        border-radius: 4px;
+                    .badge-builtin, .badge-custom, .sig-driver, .sig-consumer {
+                        display: inline-block;
+                        padding: 1px 7px;
+                        border: 1px solid var(--line-strong);
+                        border-radius: 10px;
                         font-size: 11px;
+                        white-space: nowrap;
+                    }
+                    .badge-builtin {
+                        color: var(--muted);
                     }
                     .badge-custom {
-                        background-color: #3B234A;
-                        color: #CE93D8;
-                        padding: 1px 6px;
-                        border-radius: 4px;
-                        font-size: 11px;
+                        color: var(--purple);
+                        border-color: var(--purple);
+                    }
+                    .sig-driver, .sig-consumer {
+                        margin-right: 4px;
                     }
                     .sig-driver {
-                        display: inline-block;
-                        background-color: #082F38;
-                        border: 1px solid #00E5FF;
-                        color: #00E5FF;
-                        padding: 1px 5px;
-                        border-radius: 3px;
-                        margin-right: 4px;
-                        font-weight: bold;
+                        color: var(--blue);
+                        border-color: var(--blue);
+                        background-color: var(--blue-soft);
                     }
                     .sig-consumer {
-                        display: inline-block;
-                        background-color: #0D2E1E;
-                        border: 1px solid #00E676;
-                        color: #00E676;
-                        padding: 1px 5px;
-                        border-radius: 3px;
-                        margin-right: 4px;
+                        color: var(--green);
+                        border-color: var(--green);
+                        background-color: var(--green-soft);
                     }
                     .sig-idle {
-                        color: #64748B;
+                        color: var(--faint);
                     }
                     .opcode-hex {
-                        color: #FFD54F;
-                        font-weight: bold;
+                        color: var(--muted);
                     }
                     .mnemonic {
-                        color: #00E5FF;
                         font-weight: bold;
                     }
                 </style>
                 </head>
                 <body>
-                <h1>MICRO-8 UNIFORM 2-BYTE ISA DATASHEET</h1>
+                <h1>MICRO-8 ISA datasheet</h1>
                 <div class="subtitle">Byte 0 = 8-bit Opcode | Byte 1 = 8-bit Operand/Address or 0x00 Padding | 6-Phase Sequencer (T0-T5)</div>
-                <h2>Instruction Summary Table</h2>
+                <h2>Instruction summary</h2>
                 <table>
                     <thead>
                         <tr>
@@ -150,7 +142,7 @@ public final class DatasheetGenerator {
                         </tr>
                     </thead>
                     <tbody>
-                """);
+                """.replace("/*PALETTE*/", paletteVars()));
 
         for (InstructionDef def : sorted) {
             int op = def.opcode() & 0xFF;
@@ -171,7 +163,7 @@ public final class DatasheetGenerator {
         html.append("""
                     </tbody>
                 </table>
-                <h2>Microcode Control-Store Breakdown (T0 - T5)</h2>
+                <h2>Microcode control store (T0 - T5)</h2>
                 """);
 
         for (InstructionDef def : sorted) {
@@ -213,6 +205,23 @@ public final class DatasheetGenerator {
 
         html.append("</body></html>");
         return html.toString();
+    }
+
+    /** CSS custom properties exposing the shared {@link Theme} palette to the datasheet styles. */
+    private static String paletteVars() {
+        return "--bg:" + Theme.css(Theme.BG)
+                + ";--surface:" + Theme.css(Theme.SURFACE)
+                + ";--line:" + Theme.css(Theme.LINE)
+                + ";--line-strong:" + Theme.css(Theme.LINE_STRONG)
+                + ";--text:" + Theme.css(Theme.TEXT)
+                + ";--muted:" + Theme.css(Theme.MUTED)
+                + ";--faint:" + Theme.css(Theme.FAINT)
+                + ";--blue:" + Theme.css(Theme.BLUE)
+                + ";--blue-soft:" + Theme.css(Theme.BLUE_SOFT)
+                + ";--green:" + Theme.css(Theme.GREEN)
+                + ";--green-soft:" + Theme.css(Theme.GREEN_SOFT)
+                + ";--purple:" + Theme.css(Theme.PURPLE)
+                + ";";
     }
 
     private static int getWord(int[][][] controlStore, int opcode, int tState, int flagState) {

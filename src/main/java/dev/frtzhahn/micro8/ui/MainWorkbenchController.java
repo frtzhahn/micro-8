@@ -44,7 +44,6 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -58,9 +57,9 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.net.URL;
 import java.sql.SQLException;
@@ -184,7 +183,13 @@ public final class MainWorkbenchController {
     private SevenSegmentCanvas segOutLow;
 
     @FXML
-    private Label lblOutReg;
+    private Label lblOutDec;
+
+    @FXML
+    private Label lblOutHex;
+
+    @FXML
+    private Label lblOutAscii;
 
     @FXML
     private StackPane paneBinaryLedsHost;
@@ -297,6 +302,7 @@ public final class MainWorkbenchController {
 
     @FXML
     public void initialize() {
+        Theme.loadFonts();
         Arrays.fill(addressToSourceLine, -1);
 
         if (sldClockHz != null && lblClockHz != null) {
@@ -315,42 +321,14 @@ public final class MainWorkbenchController {
         initMicrocodeDesigner();
         initLabWorkbench();
         initSchematicView();
-        initTooltips();
         initKeyboardShortcuts();
         startUiRefreshTimer();
         syncTransportControls();
-    }
 
-    private void initTooltips() {
-        if (btnAssemble != null) {
-            btnAssemble.setTooltip(new Tooltip("Assemble source code into 256-byte RAM (F5)"));
-        }
-        if (btnRun != null) {
-            btnRun.setTooltip(new Tooltip("Start background clock execution (F8)"));
-        }
-        if (btnPause != null) {
-            btnPause.setTooltip(new Tooltip("Pause clock execution (F8)"));
-        }
-        if (btnStepMicro != null) {
-            btnStepMicro.setTooltip(new Tooltip("Single micro-step T0-T5 clock tick (F6)"));
-        }
-        if (btnStepMacro != null) {
-            btnStepMacro.setTooltip(new Tooltip("Single macro-step full instruction execution (F7)"));
-        }
-        if (btnUndoMicro != null) {
-            btnUndoMicro.setTooltip(new Tooltip("Undo single micro-step using DeltaJournal (F9)"));
-        }
-        if (btnUndoMacro != null) {
-            btnUndoMacro.setTooltip(new Tooltip("Undo single macro-step using DeltaJournal (F10)"));
-        }
-        if (btnReset != null) {
-            btnReset.setTooltip(new Tooltip("Reset CPU registers, sequencer, and DeltaJournal (Ctrl+R)"));
-        }
-        if (btnSnapshots != null) {
-            btnSnapshots.setTooltip(new Tooltip("Manage workspace snapshots (save & restore)"));
-        }
-        if (btnHelpOnboarding != null) {
-            btnHelpOnboarding.setTooltip(new Tooltip("Open interactive 4-slide onboarding guide"));
+        for (TableView<?> table : Arrays.asList(tblSymbolTable, tblTrace, tblLabs, tblLabResults)) {
+            if (table != null) {
+                table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+            }
         }
     }
 
@@ -420,7 +398,15 @@ public final class MainWorkbenchController {
         }
         codeAsmEditor = new CodeArea();
         codeAsmEditor.getStyleClass().add("code-editor");
-        codeAsmEditor.setParagraphGraphicFactory(LineNumberFactory.get(codeAsmEditor));
+        // Inline style: RichTextFX paragraph graphics do not pick up descendant selectors from the scene stylesheet
+        String lineNumberStyle = "-fx-text-fill: " + Theme.css(Theme.FAINT) + "; -fx-font-family: '" + Theme.MONO
+                + "'; -fx-font-size: 13px; -fx-min-width: 40px; -fx-pref-width: 40px;"
+                + " -fx-alignment: center-right; -fx-padding: 0 14px 0 0;";
+        codeAsmEditor.setParagraphGraphicFactory(line -> {
+            Label number = new Label(Integer.toString(line + 1));
+            number.setStyle(lineNumberStyle);
+            return number;
+        });
         codeAsmEditor.textProperty().addListener((obs, oldText, newText) ->
                 codeAsmEditor.setStyleSpans(0, computeHighlighting(newText))
         );
@@ -437,14 +423,14 @@ public final class MainWorkbenchController {
         HBox strip = new HBox(10.0);
         strip.setAlignment(Pos.CENTER_LEFT);
         for (int bit = 7; bit >= 0; bit--) {
-            Circle led = new Circle(8.0);
-            led.getStyleClass().addAll("binary-led-circle", "led-off");
+            Circle led = new Circle(6.0);
+            led.getStyleClass().add("led");
             binaryLedCircles[bit] = led;
 
-            Label bitLbl = new Label("B" + bit);
-            bitLbl.getStyleClass().add("section-header");
+            Label bitLbl = new Label(Integer.toString(bit));
+            bitLbl.getStyleClass().add("led__label");
 
-            VBox col = new VBox(2.0, led, bitLbl);
+            VBox col = new VBox(4.0, led, bitLbl);
             col.setAlignment(Pos.CENTER);
             strip.getChildren().add(col);
         }
@@ -478,29 +464,35 @@ public final class MainWorkbenchController {
         colCycle.setCellValueFactory(c -> new SimpleStringProperty(String.format("%05d", c.getValue().cycleCount())));
         colCycle.setPrefWidth(72.0);
 
-        TableColumn<TraceRow, String> colTState = new TableColumn<>("T-State");
+        TableColumn<TraceRow, String> colTState = new TableColumn<>("T");
         colTState.setCellValueFactory(c -> new SimpleStringProperty("T" + c.getValue().tState()));
-        colTState.setPrefWidth(64.0);
+        colTState.setPrefWidth(48.0);
 
         TableColumn<TraceRow, String> colPc = new TableColumn<>("PC");
         colPc.setCellValueFactory(c -> new SimpleStringProperty(hex2(c.getValue().pc())));
         colPc.setPrefWidth(64.0);
 
-        TableColumn<TraceRow, String> colOp = new TableColumn<>("Opcode/Mnemonic");
+        TableColumn<TraceRow, String> colOp = new TableColumn<>("Instr");
         colOp.setCellValueFactory(c -> new SimpleStringProperty(
-                hex2(c.getValue().opcode()) + " (" + c.getValue().mnemonic() + ")"
+                hex2(c.getValue().opcode()) + " " + c.getValue().mnemonic()
         ));
-        colOp.setPrefWidth(135.0);
+        colOp.setPrefWidth(100.0);
+
+        TableColumn<TraceRow, String> colSignals = new TableColumn<>("Signals");
+        colSignals.setCellValueFactory(c -> new SimpleStringProperty(
+                ControlSignals.formatActiveSignals(c.getValue().controlWord()).replace(" | ", " ")
+        ));
+        colSignals.setPrefWidth(150.0);
 
         TableColumn<TraceRow, String> colBus = new TableColumn<>("Bus");
         colBus.setCellValueFactory(c -> new SimpleStringProperty(hex2(c.getValue().busValue())));
         colBus.setPrefWidth(64.0);
 
-        TableColumn<TraceRow, String> colRegA = new TableColumn<>("RegA");
+        TableColumn<TraceRow, String> colRegA = new TableColumn<>("A");
         colRegA.setCellValueFactory(c -> new SimpleStringProperty(hex2(c.getValue().regA())));
         colRegA.setPrefWidth(64.0);
 
-        TableColumn<TraceRow, String> colRegB = new TableColumn<>("RegB");
+        TableColumn<TraceRow, String> colRegB = new TableColumn<>("B");
         colRegB.setCellValueFactory(c -> new SimpleStringProperty(hex2(c.getValue().regB())));
         colRegB.setPrefWidth(64.0);
 
@@ -514,20 +506,21 @@ public final class MainWorkbenchController {
         ));
         colFlags.setPrefWidth(72.0);
 
-        TableColumn<TraceRow, String> colOutDec = new TableColumn<>("Out (Dec)");
-        colOutDec.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().outDecimal()));
-        colOutDec.setPrefWidth(85.0);
-
-        TableColumn<TraceRow, String> colOutHex = new TableColumn<>("Out (Hex)");
+        TableColumn<TraceRow, String> colOutHex = new TableColumn<>("Out");
         colOutHex.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().outHex()));
-        colOutHex.setPrefWidth(85.0);
+        colOutHex.setPrefWidth(64.0);
 
-        TableColumn<TraceRow, String> colOutAsc = new TableColumn<>("Out (ASC)");
+        TableColumn<TraceRow, String> colOutDec = new TableColumn<>("Dec");
+        colOutDec.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().outDecimal()));
+        colOutDec.setPrefWidth(56.0);
+
+        TableColumn<TraceRow, String> colOutAsc = new TableColumn<>("ASCII");
         colOutAsc.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().outAscii()));
-        colOutAsc.setPrefWidth(85.0);
+        colOutAsc.setPrefWidth(56.0);
 
         tblTrace.getColumns().setAll(List.of(
-                colCycle, colTState, colPc, colOp, colBus, colRegA, colRegB, colMar, colFlags, colOutDec, colOutHex, colOutAsc
+                colCycle, colTState, colPc, colOp, colSignals, colBus, colRegA, colRegB, colMar, colFlags,
+                colOutHex, colOutDec, colOutAsc
         ));
         tblTrace.setItems(traceItems);
     }
@@ -564,17 +557,17 @@ public final class MainWorkbenchController {
         colPhase.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getTStateLabel()));
         colPhase.setPrefWidth(56.0);
 
-        TableColumn<MicrocodeStepRow, String> colDrivers = new TableColumn<>("Bus Driver (Max 1: RO, AO, BO, EO, CO)");
+        TableColumn<MicrocodeStepRow, String> colDrivers = new TableColumn<>("Bus driver (max 1)");
         colDrivers.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getHexWord()));
         colDrivers.setCellFactory(col -> createSignalCheckboxCell(driverSpecs, true));
         colDrivers.setPrefWidth(250.0);
 
-        TableColumn<MicrocodeStepRow, String> colConsumers = new TableColumn<>("Latch / Control Signals (12 Wires)");
+        TableColumn<MicrocodeStepRow, String> colConsumers = new TableColumn<>("Latch and control signals");
         colConsumers.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getHexWord()));
         colConsumers.setCellFactory(col -> createSignalCheckboxCell(consumerSpecs, false));
         colConsumers.setPrefWidth(480.0);
 
-        TableColumn<MicrocodeStepRow, String> colWord = new TableColumn<>("Control Word");
+        TableColumn<MicrocodeStepRow, String> colWord = new TableColumn<>("Control word");
         colWord.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getHexWord()));
         colWord.setPrefWidth(105.0);
 
@@ -628,16 +621,9 @@ public final class MainWorkbenchController {
                     CheckBox cb = checkBoxes.get(i);
                     boolean active = row.isSignalSet(spec.mask());
                     cb.setSelected(active);
-                    cb.getStyleClass().removeAll("wire-active-driver", "wire-active-consumer", "wire-contention-fault");
-                    if (active) {
-                        if (isDriverGroup && contention) {
-                            cb.getStyleClass().add("wire-contention-fault");
-                        } else if (isDriverGroup) {
-                            cb.getStyleClass().add("wire-active-driver");
-                        } else {
-                            cb.getStyleClass().add("wire-active-consumer");
-                        }
-                    }
+                    Theme.toggleClass(cb, "signal--fault", active && isDriverGroup && contention);
+                    Theme.toggleClass(cb, "signal--driver", active && isDriverGroup && !contention);
+                    Theme.toggleClass(cb, "signal--consumer", active && !isDriverGroup);
                 }
                 updating = false;
                 setGraphic(box);
@@ -720,7 +706,7 @@ public final class MainWorkbenchController {
                 codeAsmEditor.setStyleSpans(0, computeHighlighting(codeAsmEditor.getText()));
             }
             String msg = "Saved instruction " + hex2(opcode) + " (" + mnemonic + ") and recompiled control store.";
-            showMicrocodeValidationSuccess("OK - " + msg);
+            showMicrocodeValidationSuccess(msg);
             showDiagnosticsSuccess(msg);
         } catch (BusContentionException | IllegalArgumentException | SQLException ex) {
             showMicrocodeValidationError(ex.getMessage());
@@ -744,7 +730,7 @@ public final class MainWorkbenchController {
                 codeAsmEditor.setStyleSpans(0, computeHighlighting(codeAsmEditor.getText()));
             }
             String msg = "Reset SQLite control store to default 11 built-in instructions.";
-            showMicrocodeValidationSuccess("OK - " + msg);
+            showMicrocodeValidationSuccess(msg);
             showDiagnosticsSuccess(msg);
         } catch (SQLException | BusContentionException ex) {
             showMicrocodeValidationError("Reset failed: " + ex.getMessage());
@@ -891,22 +877,26 @@ public final class MainWorkbenchController {
                 }
             }
         }
-        showMicrocodeValidationSuccess("OK - Zero Bus Contention Detected");
+        showMicrocodeValidationSuccess("No bus contention");
     }
 
     private void showMicrocodeValidationSuccess(String msg) {
-        if (lblMicrocodeValidation != null) {
-            lblMicrocodeValidation.getStyleClass().remove("diagnostics-error");
-            lblMicrocodeValidation.setText(msg);
-        }
+        setStatus(lblMicrocodeValidation, msg, false);
     }
 
     private void showMicrocodeValidationError(String msg) {
-        if (lblMicrocodeValidation != null) {
-            if (!lblMicrocodeValidation.getStyleClass().contains("diagnostics-error")) {
-                lblMicrocodeValidation.getStyleClass().add("diagnostics-error");
-            }
-            lblMicrocodeValidation.setText(msg);
+        setStatus(lblMicrocodeValidation, msg, true);
+    }
+
+    /** Shows a message on a status label, switching its icon and color between ok and error. */
+    private static void setStatus(Label label, String msg, boolean error) {
+        if (label == null) {
+            return;
+        }
+        label.setText(msg);
+        Theme.toggleClass(label, "status--error", error);
+        if (label.getGraphic() instanceof FontIcon icon) {
+            icon.setIconLiteral(error ? "fth-alert-circle" : "fth-check-circle");
         }
     }
 
@@ -952,6 +942,7 @@ public final class MainWorkbenchController {
             }
             if (tblTrace != null && !traceItems.isEmpty()) {
                 tblTrace.scrollTo(traceItems.size() - 1);
+                tblTrace.getSelectionModel().selectLast();
             }
         }
     }
@@ -989,7 +980,7 @@ public final class MainWorkbenchController {
             tblSymbolTable.setItems(FXCollections.observableArrayList(program.symbolTable()));
         }
 
-        showDiagnosticsSuccess("Ready. Assembled " + program.emittedByteCount() + "B (" + program.symbolTable().size() + " symbol(s)).");
+        showDiagnosticsSuccess("Assembled " + program.emittedByteCount() + " bytes · " + program.symbolTable().size() + " symbols");
         renderSnapshot(snap);
         syncTransportControls();
     }
@@ -1163,7 +1154,7 @@ public final class MainWorkbenchController {
             lblTState.setText("T" + snap.tState());
         }
         if (lblFlags != null) {
-            lblFlags.setText("Z:" + (snap.zeroFlag() ? 1 : 0) + " C:" + (snap.carryFlag() ? 1 : 0));
+            lblFlags.setText("Z" + (snap.zeroFlag() ? 1 : 0) + " C" + (snap.carryFlag() ? 1 : 0));
         }
         if (lblPc != null) {
             lblPc.setText(hex2(snap.pc()));
@@ -1191,26 +1182,20 @@ public final class MainWorkbenchController {
         if (segOutLow != null) {
             segOutLow.setHexNibble(SevenSegmentCanvas.extractLowNibble(out));
         }
-        if (lblOutReg != null) {
-            String asc = (out >= 0x20 && out <= 0x7E) ? ("'" + (char) out + "'") : "'.'";
-            lblOutReg.setText(String.format("Dec: %03d | Hex: %s | ASC: %s", out, hex2(out), asc));
+        if (lblOutDec != null) {
+            lblOutDec.setText(String.format("%03d", out));
+        }
+        if (lblOutHex != null) {
+            lblOutHex.setText(hex2(out));
+        }
+        if (lblOutAscii != null) {
+            lblOutAscii.setText((out >= 0x20 && out <= 0x7E) ? ("'" + (char) out + "'") : "'.'");
         }
 
         for (int bit = 0; bit < 8; bit++) {
             Circle led = binaryLedCircles[bit];
             if (led != null) {
-                boolean bitOn = SevenSegmentCanvas.extractBit(out, bit) == 1;
-                if (bitOn) {
-                    led.getStyleClass().remove("led-off");
-                    if (!led.getStyleClass().contains("led-on")) {
-                        led.getStyleClass().add("led-on");
-                    }
-                } else {
-                    led.getStyleClass().remove("led-on");
-                    if (!led.getStyleClass().contains("led-off")) {
-                        led.getStyleClass().add("led-off");
-                    }
-                }
+                Theme.toggleClass(led, "led--on", SevenSegmentCanvas.extractBit(out, bit) == 1);
             }
         }
 
@@ -1273,7 +1258,7 @@ public final class MainWorkbenchController {
         }
         int targetIdx = oneBasedLine - 1;
         if (targetIdx >= 0 && targetIdx < paragraphCount) {
-            codeAsmEditor.setParagraphStyle(targetIdx, List.of("asm-active-line"));
+            codeAsmEditor.setParagraphStyle(targetIdx, List.of("asm__active-line"));
             highlightedParagraph = targetIdx;
         } else {
             highlightedParagraph = -1;
@@ -1281,19 +1266,11 @@ public final class MainWorkbenchController {
     }
 
     private void showDiagnosticsSuccess(String msg) {
-        if (lblAsmDiagnostics != null) {
-            lblAsmDiagnostics.getStyleClass().remove("diagnostics-error");
-            lblAsmDiagnostics.setText(msg);
-        }
+        setStatus(lblAsmDiagnostics, msg, false);
     }
 
     private void showDiagnosticsError(String msg) {
-        if (lblAsmDiagnostics != null) {
-            if (!lblAsmDiagnostics.getStyleClass().contains("diagnostics-error")) {
-                lblAsmDiagnostics.getStyleClass().add("diagnostics-error");
-            }
-            lblAsmDiagnostics.setText(msg);
-        }
+        setStatus(lblAsmDiagnostics, msg, true);
     }
 
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
@@ -1308,17 +1285,17 @@ public final class MainWorkbenchController {
         while (matcher.find()) {
             String styleClass = null;
             if (matcher.group("COMMENT") != null) {
-                styleClass = "asm-comment";
+                styleClass = "asm__comment";
             } else if (matcher.group("LABEL") != null) {
-                styleClass = "asm-label";
+                styleClass = "asm__label";
             } else if (matcher.group("DIRECTIVE") != null) {
-                styleClass = "asm-directive";
+                styleClass = "asm__directive";
             } else if (matcher.group("NUMBER") != null) {
-                styleClass = "asm-number";
+                styleClass = "asm__number";
             } else if (matcher.group("WORD") != null) {
                 String upperWord = matcher.group("WORD").toUpperCase(Locale.ROOT);
                 if (assembler.getInstructionMap().containsKey(upperWord)) {
-                    styleClass = "asm-mnemonic";
+                    styleClass = "asm__mnemonic";
                 }
             }
 
@@ -1390,9 +1367,8 @@ public final class MainWorkbenchController {
             tblLabs.getColumns().setAll(List.of(colId, colTitle, colStatus));
             tblLabs.setItems(labItems);
             tblLabs.getSelectionModel().selectedItemProperty().addListener((obs, oldLab, newLab) -> {
-                if (newLab != null && lblLabReport != null) {
-                    lblLabReport.getStyleClass().remove("diagnostics-error");
-                    lblLabReport.setText(newLab.title() + " - " + newLab.description());
+                if (newLab != null) {
+                    showLabReportSuccess(newLab.title() + " - " + newLab.description());
                 }
             });
         }
@@ -1534,19 +1510,11 @@ public final class MainWorkbenchController {
     }
 
     private void showLabReportSuccess(String msg) {
-        if (lblLabReport != null) {
-            lblLabReport.getStyleClass().remove("diagnostics-error");
-            lblLabReport.setText(msg);
-        }
+        setStatus(lblLabReport, msg, false);
     }
 
     private void showLabReportError(String msg) {
-        if (lblLabReport != null) {
-            if (!lblLabReport.getStyleClass().contains("diagnostics-error")) {
-                lblLabReport.getStyleClass().add("diagnostics-error");
-            }
-            lblLabReport.setText(msg);
-        }
+        setStatus(lblLabReport, msg, true);
     }
 
     @FXML
@@ -1584,10 +1552,11 @@ public final class MainWorkbenchController {
         txtName.setPrefWidth(220.0);
         Button btnSave = new Button("Save Snapshot");
         Label lblStatus = new Label("Save or restore full editor code, 256B RAM, and CPU registers.");
-        lblStatus.getStyleClass().add("diagnostics-banner");
+        lblStatus.getStyleClass().addAll("status", "status--boxed");
+        lblStatus.setMaxWidth(Double.MAX_VALUE);
 
         TableView<WorkspaceSnapshot> tblSnapshots = new TableView<>(snapshotItems);
-        tblSnapshots.getStyleClass().add("workbench-table");
+        tblSnapshots.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<WorkspaceSnapshot, String> colName = new TableColumn<>("Name");
         colName.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().name()));
@@ -1706,7 +1675,7 @@ public final class MainWorkbenchController {
 
         VBox root = new VBox(10.0, topRow, tblSnapshots, lblStatus, bottomRow);
         root.setPadding(new Insets(12.0));
-        root.getStyleClass().add("root-workbench");
+        root.getStyleClass().add("workbench");
 
         Scene scene = new Scene(root, 640.0, 420.0);
         URL cssUrl = getClass().getResource("/dev/frtzhahn/micro8/ui/workbench.css");

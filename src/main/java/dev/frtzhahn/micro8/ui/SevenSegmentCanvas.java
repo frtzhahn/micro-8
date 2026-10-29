@@ -2,7 +2,6 @@ package dev.frtzhahn.micro8.ui;
 
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
 
 /**
  * Hardware-style 7-segment hexadecimal digit display canvas (0..F) with pure bitmask helpers.
@@ -36,15 +35,10 @@ public final class SevenSegmentCanvas extends Canvas {
             SEG_A | SEG_F | SEG_G | SEG_E                          // F
     };
 
-    private static final Color BG_HOUSING = Color.web("#111318");
-    private static final Color BORDER_COL = Color.web("#2A2F3A");
-    private static final Color LED_ON     = Color.web("#FF2A3D");
-    private static final Color LED_OFF    = Color.web("#2B1115");
-
     private int currentNibble = -1;
 
     public SevenSegmentCanvas() {
-        super(46.0, 72.0);
+        super(34.0, 58.0);
         setHexNibble(0);
     }
 
@@ -84,16 +78,11 @@ public final class SevenSegmentCanvas extends Canvas {
         double w = getWidth();
         double h = getHeight();
         GraphicsContext gc = getGraphicsContext2D();
-
-        gc.setFill(BG_HOUSING);
-        gc.fillRoundRect(0, 0, w, h, 6, 6);
-        gc.setStroke(BORDER_COL);
-        gc.setLineWidth(1.0);
-        gc.strokeRoundRect(0.5, 0.5, w - 1, h - 1, 6, 6);
+        gc.clearRect(0, 0, w, h);
 
         int mask = encodeHexDigit(currentNibble);
-        double padX = 8.0;
-        double padY = 8.0;
+        double padX = 1.0;
+        double padY = 1.0;
         double thick = 5.0;
         double horizLen = w - 2 * padX - 2 * thick;
         double vertLen = (h - 2 * padY - 3 * thick) * 0.5;
@@ -123,7 +112,7 @@ public final class SevenSegmentCanvas extends Canvas {
     }
 
     private void drawSegment(GraphicsContext gc, double x, double y, double w, double h, boolean lit) {
-        gc.setFill(lit ? LED_ON : LED_OFF);
+        gc.setFill(lit ? Theme.GREEN : Theme.GREEN_OFF);
         gc.fillRoundRect(x, y, w, h, 3, 3);
     }
 }

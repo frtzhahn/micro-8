@@ -4,50 +4,49 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Separator?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx/25"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="dev.frtzhahn.micro8.ui.OnboardingController"
-      spacing="10.0"
-      styleClass="root-workbench"
+      spacing="12.0"
+      styleClass="workbench"
       prefWidth="760.0" prefHeight="580.0">
     <padding>
-        <Insets top="14.0" right="14.0" bottom="14.0" left="14.0"/>
+        <Insets top="16.0" right="16.0" bottom="16.0" left="16.0"/>
     </padding>
 
     <HBox spacing="8.0" alignment="CENTER_LEFT">
-        <Label text="MICRO-8 QUICKSTART TOUR" styleClass="workbench-title"/>
-        <Region HBox.hgrow="ALWAYS"/>
+        <FontIcon iconLiteral="fth-help-circle"/>
+        <Label text="Quickstart tour" styleClass="dialog__title"/>
     </HBox>
 
-    <StackPane styleClass="panel-card" VBox.vgrow="ALWAYS">
+    <StackPane styleClass="dialog__card" VBox.vgrow="ALWAYS">
         <padding>
             <Insets top="8.0" right="8.0" bottom="8.0" left="8.0"/>
         </padding>
         <ImageView fx:id="imgOnboardingSlide" fitWidth="720.0" fitHeight="420.0" preserveRatio="true"/>
     </StackPane>
 
-    <VBox spacing="4.0" styleClass="panel-card">
-        <padding>
-            <Insets top="8.0" right="10.0" bottom="8.0" left="10.0"/>
-        </padding>
-        <Label fx:id="lblSlideTitle" text="Slide 1 - Uniform 2-Byte ISA &amp; 6-Phase Sequencer" styleClass="workbench-title"/>
-        <Label fx:id="lblSlideCaption" text="" wrapText="true"/>
+    <VBox spacing="4.0">
+        <Label fx:id="lblSlideTitle" text="Slide 1 - Uniform 2-Byte ISA &amp; 6-Phase Sequencer" styleClass="dialog__subtitle"/>
+        <Label fx:id="lblSlideCaption" text="" wrapText="true" styleClass="dialog__caption"/>
     </VBox>
 
-    <Separator/>
-
-    <HBox spacing="10.0" alignment="CENTER_LEFT">
+    <HBox spacing="8.0" alignment="CENTER_LEFT">
         <CheckBox fx:id="chkHideOnboarding" text="Don't show this on startup again" onAction="#handleToggleHideOnboarding"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="btnPrevSlide" text="&lt;" onAction="#handlePrevSlide" minWidth="42.0"/>
-        <Label fx:id="lblSlideCounter" text="1 / 4" minWidth="48.0" alignment="CENTER"/>
-        <Button fx:id="btnNextSlide" text="&gt;" onAction="#handleNextSlide" minWidth="42.0"/>
+        <Button fx:id="btnPrevSlide" styleClass="button--icon, button--outline" onAction="#handlePrevSlide">
+            <graphic><FontIcon iconLiteral="fth-chevron-left"/></graphic>
+        </Button>
+        <Label fx:id="lblSlideCounter" text="1 / 4" minWidth="48.0" alignment="CENTER" styleClass="mono"/>
+        <Button fx:id="btnNextSlide" styleClass="button--icon, button--outline" onAction="#handleNextSlide">
+            <graphic><FontIcon iconLiteral="fth-chevron-right"/></graphic>
+        </Button>
     </HBox>
 </VBox>

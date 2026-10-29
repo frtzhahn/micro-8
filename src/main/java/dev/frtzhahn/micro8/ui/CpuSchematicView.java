@@ -3,6 +3,7 @@ package dev.frtzhahn.micro8.ui;
 import dev.frtzhahn.micro8.cpu.ControlSignals;
 import dev.frtzhahn.micro8.cpu.ControlSignals.SignalSpec;
 import dev.frtzhahn.micro8.cpu.CpuSnapshot;
+import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
@@ -29,24 +30,18 @@ import static dev.frtzhahn.micro8.cpu.ControlSignals.RO;
 import static dev.frtzhahn.micro8.cpu.ControlSignals.SU;
 
 /**
- * Vector canvas rendering the MICRO-8 system bus, registers, ALU, T0-T5 sequencer, and 17 control wires at 60 FPS.
+ * Vector canvas rendering the MICRO-8 system bus, registers, ALU, T0-T5 sequencer, and 17 control wires.
+ * Blue marks the block driving the bus, green marks blocks latching from it.
  */
 public final class CpuSchematicView extends Pane {
 
-    private static final Color BG_SURFACE       = Color.web("#111318");
-    private static final Color CARD_FILL        = Color.web("#1A1D24");
-    private static final Color CARD_BORDER      = Color.web("#2A2F3A");
-    private static final Color WIRE_IDLE        = Color.web("#333A48");
-    private static final Color WIRE_DRIVER      = Color.web("#00E5FF");
-    private static final Color WIRE_CONSUMER    = Color.web("#00E676");
-    private static final Color TSTATE_ACTIVE    = Color.web("#2979FF");
-    private static final Color TEXT_PRIMARY     = Color.web("#E2E8F0");
-    private static final Color TEXT_MUTED       = Color.web("#94A3B8");
-    private static final Color TEXT_GOLD        = Color.web("#FFD54F");
+    private static final Font FONT_TITLE = Font.font(Theme.SANS, FontWeight.BOLD, 11);
+    private static final Font FONT_VALUE = Font.font(Theme.MONO, 15);
+    private static final Font FONT_DETAIL = Font.font(Theme.MONO, 12);
+    private static final Font FONT_CHIP = Font.font(Theme.MONO, 10);
+    private static final Font FONT_PILL = Font.font(Theme.MONO, FontWeight.BOLD, 11);
 
-    private static final Font FONT_TITLE = Font.font("Monospaced", FontWeight.BOLD, 12);
-    private static final Font FONT_VALUE = Font.font("Monospaced", FontWeight.BOLD, 13);
-    private static final Font FONT_SMALL = Font.font("Monospaced", FontWeight.NORMAL, 11);
+    private static final double ROW_LABEL_W = 92.0;
 
     private final Canvas canvas = new Canvas(600, 460);
     private CpuSnapshot currentSnapshot;
@@ -65,10 +60,8 @@ public final class CpuSchematicView extends Pane {
     }
 
     private void resizeAndRedraw() {
-        double w = Math.max(420.0, getWidth());
-        double h = Math.max(360.0, getHeight());
-        canvas.setWidth(w);
-        canvas.setHeight(h);
+        canvas.setWidth(Math.max(480.0, getWidth()));
+        canvas.setHeight(Math.max(360.0, getHeight()));
         draw();
     }
 
@@ -76,115 +69,80 @@ public final class CpuSchematicView extends Pane {
         double w = canvas.getWidth();
         double h = canvas.getHeight();
         GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.clearRect(0, 0, w, h);
+        gc.setTextBaseline(VPos.CENTER);
 
-        gc.setFill(BG_SURFACE);
-        gc.fillRoundRect(0, 0, w, h, 8, 8);
-        gc.setStroke(CARD_BORDER);
-        gc.setLineWidth(1.0);
-        gc.strokeRoundRect(0.5, 0.5, w - 1, h - 1, 8, 8);
-
-        int ctrl = currentSnapshot == null ? 0 : currentSnapshot.controlWord();
-        int busVal = currentSnapshot == null ? 0 : currentSnapshot.busValue();
-        int pc = currentSnapshot == null ? 0 : currentSnapshot.pc();
-        int mar = currentSnapshot == null ? 0 : currentSnapshot.mar();
-        int ramAtMar = (currentSnapshot == null) ? 0 : Byte.toUnsignedInt(currentSnapshot.ramCopy()[mar & 0xFF]);
-        int ir = currentSnapshot == null ? 0 : currentSnapshot.ir();
-        int regA = currentSnapshot == null ? 0 : currentSnapshot.regA();
-        int regB = currentSnapshot == null ? 0 : currentSnapshot.regB();
-        int alu = currentSnapshot == null ? 0 : currentSnapshot.aluResult();
-        int outReg = currentSnapshot == null ? 0 : currentSnapshot.outReg();
-        boolean zFlag = currentSnapshot != null && currentSnapshot.zeroFlag();
-        boolean cFlag = currentSnapshot != null && currentSnapshot.carryFlag();
-        int tState = currentSnapshot == null ? 0 : currentSnapshot.tState();
+        CpuSnapshot s = currentSnapshot;
+        int ctrl = s == null ? 0 : s.controlWord();
+        int busVal = s == null ? 0 : s.busValue();
+        int mar = s == null ? 0 : s.mar();
+        int ramAtMar = s == null ? 0 : Byte.toUnsignedInt(s.ramCopy()[mar & 0xFF]);
+        int alu = s == null ? 0 : s.aluResult();
+        boolean zFlag = s != null && s.zeroFlag();
+        boolean cFlag = s != null && s.carryFlag();
 
         boolean busDriven = (ctrl & BUS_DRIVER_MASK) != 0;
-        double busX = w * 0.50;
+        double busX = Math.round(w * 0.5);
         double topY = 44.0;
-        double busBottomY = h - 98.0;
+        double busBottomY = h - 92.0;
 
-        // System Bus Header & Vertical Spine
+        // Bus spine and value pill
+        gc.setStroke(busDriven ? Theme.BLUE : Theme.LINE_STRONG);
+        gc.setLineWidth(3.0);
+        gc.strokeLine(busX, topY - 10, busX, busBottomY);
+
+        String busText = "BUS " + hex2(busVal) + " " + dec3(busVal);
+        double pillW = 132.0;
+        gc.setFill(Theme.BG);
+        gc.fillRoundRect(busX - pillW / 2, 6, pillW, 24, 24, 24);
+        gc.setStroke(busDriven ? Theme.BLUE : Theme.LINE_STRONG);
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(busX - pillW / 2 + 0.5, 6.5, pillW - 1, 23, 24, 24);
+        gc.setFont(FONT_PILL);
         gc.setTextAlign(TextAlignment.CENTER);
-        gc.setFont(FONT_TITLE);
-        gc.setFill(busDriven ? WIRE_DRIVER : TEXT_PRIMARY);
-        gc.fillText(String.format("8-BIT SYSTEM BUS [%s] (%03d)", hex2(busVal), busVal), busX, 24.0);
+        gc.setFill(busDriven ? Theme.BLUE : Theme.MUTED);
+        gc.fillText(busText, busX, 18);
 
-        gc.setStroke(busDriven ? WIRE_DRIVER : WIRE_IDLE);
-        gc.setLineWidth(busDriven ? 4.0 : 2.5);
-        gc.strokeLine(busX - 5, topY, busX - 5, busBottomY);
-        gc.strokeLine(busX + 5, topY, busX + 5, busBottomY);
-
-        double blockW = Math.min(185.0, (w - 90.0) * 0.40);
-        double blockH = Math.min(62.0, (busBottomY - topY - 24.0) / 4.2);
-        double leftX = 18.0;
-        double rightX = w - blockW - 18.0;
+        double gapToBus = 56.0;
+        double blockW = Math.min(210.0, busX - gapToBus - 4);
+        double blockH = Math.min(58.0, (busBottomY - topY - 36.0) / 4.0);
         double rowGap = (busBottomY - topY - blockH * 4) / 3.0;
+        double leftX = busX - gapToBus - blockW;
+        double rightX = busX + gapToBus;
 
-        // Left Column Blocks: PC, MAR, RAM 256B, IR
-        drawBlock(gc, leftX, topY, blockW, blockH, busX - 5, true,
-                "PC (Program Counter)",
-                String.format("[%s] (%03d)", hex2(pc), pc),
-                "CO | CE | J",
-                (ctrl & CO) != 0,
-                (ctrl & (CE | J)) != 0);
+        drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 0), blockW, blockH, busX, true,
+                "PC", hex2(s == null ? 0 : s.pc()), dec3(s == null ? 0 : s.pc()), "CO CE J",
+                (ctrl & CO) != 0, (ctrl & (CE | J)) != 0);
+        drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 1), blockW, blockH, busX, true,
+                "MAR", hex2(mar), dec3(mar), "MI",
+                false, (ctrl & MI) != 0);
+        drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 2), blockW, blockH, busX, true,
+                "RAM @ MAR", hex2(ramAtMar), dec3(ramAtMar), "RO RI",
+                (ctrl & RO) != 0, (ctrl & RI) != 0);
+        drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 3), blockW, blockH, busX, true,
+                "IR", hex2(s == null ? 0 : s.ir()), currentMnemonic, "II",
+                false, (ctrl & II) != 0);
 
-        drawBlock(gc, leftX, topY + (blockH + rowGap), blockW, blockH, busX - 5, true,
-                "MAR (Address Reg)",
-                String.format("[%s] (%03d)", hex2(mar), mar),
-                "MI",
-                false,
-                (ctrl & MI) != 0);
+        drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 0), blockW, blockH, busX, false,
+                "A", hex2(s == null ? 0 : s.regA()), dec3(s == null ? 0 : s.regA()), "AO AI",
+                (ctrl & AO) != 0, (ctrl & AI) != 0);
+        drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 1), blockW, blockH, busX, false,
+                "ALU · " + ((ctrl & SU) != 0 ? "SUB" : "ADD"), hex2(alu),
+                "Z" + (zFlag ? 1 : 0) + " C" + (cFlag ? 1 : 0), "EO SU FI",
+                (ctrl & EO) != 0, (ctrl & (SU | FI)) != 0);
+        drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 2), blockW, blockH, busX, false,
+                "B", hex2(s == null ? 0 : s.regB()), dec3(s == null ? 0 : s.regB()), "BO BI",
+                (ctrl & BO) != 0, (ctrl & BI) != 0);
+        drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 3), blockW, blockH, busX, false,
+                "OUT", hex2(s == null ? 0 : s.outReg()), dec3(s == null ? 0 : s.outReg()), "OI",
+                false, (ctrl & OI) != 0);
 
-        drawBlock(gc, leftX, topY + 2 * (blockH + rowGap), blockW, blockH, busX - 5, true,
-                "RAM 256B @ MAR",
-                String.format("[%s] (%03d)", hex2(ramAtMar), ramAtMar),
-                "RO | RI",
-                (ctrl & RO) != 0,
-                (ctrl & RI) != 0);
+        drawSequencerRow(gc, h - 70.0, s == null ? 0 : s.tState());
+        drawControlWiresRow(gc, w, h - 34.0, ctrl);
+    }
 
-        drawBlock(gc, leftX, topY + 3 * (blockH + rowGap), blockW, blockH, busX - 5, true,
-                "IR (Opcode Only)",
-                String.format("[%s] %s", hex2(ir), currentMnemonic),
-                "II (No IO)",
-                false,
-                (ctrl & II) != 0);
-
-        // Right Column Blocks: REG A, ALU, REG B, OUT
-        drawBlock(gc, rightX, topY, blockW, blockH, busX + 5, false,
-                "REG A (Accumulator)",
-                String.format("[%s] (%03d)", hex2(regA), regA),
-                "AO | AI",
-                (ctrl & AO) != 0,
-                (ctrl & AI) != 0);
-
-        String aluMode = (ctrl & SU) != 0 ? "SUB" : "ADD";
-        drawBlock(gc, rightX, topY + (blockH + rowGap), blockW, blockH, busX + 5, false,
-                "ALU (" + aluMode + ")",
-                String.format("[%s] Z:%d C:%d", hex2(alu), zFlag ? 1 : 0, cFlag ? 1 : 0),
-                "EO | SU | FI",
-                (ctrl & EO) != 0,
-                (ctrl & (SU | FI)) != 0);
-
-        drawBlock(gc, rightX, topY + 2 * (blockH + rowGap), blockW, blockH, busX + 5, false,
-                "REG B (Operand)",
-                String.format("[%s] (%03d)", hex2(regB), regB),
-                "BO | BI",
-                (ctrl & BO) != 0,
-                (ctrl & BI) != 0);
-
-        drawBlock(gc, rightX, topY + 3 * (blockH + rowGap), blockW, blockH, busX + 5, false,
-                "OUT (Output Reg)",
-                String.format("[%s] (%03d)", hex2(outReg), outReg),
-                "OI",
-                false,
-                (ctrl & OI) != 0);
-
-        // Sequencer T0..T5 Row
-        double seqY = h - 72.0;
-        drawSequencerRow(gc, w, seqY, tState);
-
-        // 17 Control Wires Strip
-        double wiresY = h - 34.0;
-        drawControlWiresRow(gc, w, wiresY, ctrl);
+    private static double rowY(double topY, double blockH, double rowGap, int row) {
+        return topY + row * (blockH + rowGap);
     }
 
     private void drawBlock(
@@ -193,92 +151,124 @@ public final class CpuSchematicView extends Pane {
             double y,
             double w,
             double h,
-            double busAnchorX,
+            double busX,
             boolean leftSide,
             String title,
-            String valueText,
-            String signalsText,
-            boolean activeDriver,
-            boolean activeConsumer
+            String value,
+            String detail,
+            String signals,
+            boolean driver,
+            boolean consumer
     ) {
-        double midY = y + h * 0.5;
-        double wireStartX = leftSide ? (x + w) : x;
+        Color role = driver ? Theme.BLUE : (consumer ? Theme.GREEN : null);
+        Color soft = driver ? Theme.BLUE_SOFT : Theme.GREEN_SOFT;
+        double midY = Math.round(y + h * 0.5);
+        double edgeX = leftSide ? x + w : x;
 
-        Color accent = activeDriver ? WIRE_DRIVER : (activeConsumer ? WIRE_CONSUMER : WIRE_IDLE);
-        gc.setStroke(accent);
-        gc.setLineWidth((activeDriver || activeConsumer) ? 2.8 : 1.4);
-        gc.strokeLine(wireStartX, midY, busAnchorX, midY);
+        gc.setStroke(role == null ? Theme.LINE_STRONG : role);
+        gc.setLineWidth(role == null ? 1.5 : 2.0);
+        gc.strokeLine(edgeX, midY, busX, midY);
+        if (driver) {
+            drawArrowHead(gc, busX + (leftSide ? -1.5 : 1.5), midY, leftSide, role);
+        } else if (consumer) {
+            drawArrowHead(gc, edgeX, midY, !leftSide, role);
+        }
 
-        gc.setFill(CARD_FILL);
-        gc.fillRoundRect(x, y, w, h, 6, 6);
-        gc.setStroke((activeDriver || activeConsumer) ? accent : CARD_BORDER);
-        gc.setLineWidth((activeDriver || activeConsumer) ? 2.0 : 1.0);
-        gc.strokeRoundRect(x, y, w, h, 6, 6);
+        gc.setFill(role == null ? Theme.SURFACE : soft);
+        gc.fillRoundRect(x, y, w, h, 14, 14);
+        gc.setStroke(role == null ? Theme.LINE_STRONG : role);
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(x + 0.5, y + 0.5, w - 1, h - 1, 14, 14);
 
+        double titleY = y + 17;
         gc.setTextAlign(TextAlignment.LEFT);
-        gc.setFont(FONT_SMALL);
-        gc.setFill(TEXT_MUTED);
-        gc.fillText(title, x + 8, y + 16);
+        gc.setFont(FONT_TITLE);
+        gc.setFill(Theme.MUTED);
+        gc.fillText(title, x + 12, titleY);
 
+        gc.setTextAlign(TextAlignment.RIGHT);
+        gc.setFont(FONT_CHIP);
+        gc.setFill(role == null ? Theme.FAINT : role);
+        gc.fillText(signals, x + w - 12, titleY);
+
+        double valueY = y + h - 17;
+        gc.setTextAlign(TextAlignment.LEFT);
         gc.setFont(FONT_VALUE);
-        gc.setFill(activeDriver ? WIRE_DRIVER : (activeConsumer ? WIRE_CONSUMER : TEXT_PRIMARY));
-        gc.fillText(valueText, x + 8, y + 35);
+        gc.setFill(Theme.TEXT);
+        gc.fillText(value, x + 12, valueY);
 
-        gc.setFont(FONT_SMALL);
-        gc.setFill(TEXT_GOLD);
-        gc.fillText(signalsText, x + 8, y + 52);
+        gc.setFont(FONT_DETAIL);
+        gc.setFill(Theme.FAINT);
+        gc.fillText(detail, x + 12 + 46, valueY);
     }
 
-    private void drawSequencerRow(GraphicsContext gc, double width, double y, int activeTState) {
-        double pillW = 46.0;
-        double pillH = 22.0;
-        double gap = 8.0;
-        double totalW = 6 * pillW + 5 * gap;
-        double startX = (width - totalW) * 0.5;
+    /** Small filled triangle whose tip sits at (tipX, y), pointing left or right. */
+    private static void drawArrowHead(GraphicsContext gc, double tipX, double y, boolean pointsRight, Color color) {
+        double back = pointsRight ? tipX - 7 : tipX + 7;
+        gc.setFill(color);
+        gc.fillPolygon(new double[]{tipX, back, back}, new double[]{y, y - 4.5, y + 4.5}, 3);
+    }
 
+    private void drawSequencerRow(GraphicsContext gc, double y, int activeTState) {
+        drawRowLabel(gc, "Sequencer", y);
+        double pillW = 38.0;
+        double pillH = 22.0;
+        double gap = 6.0;
+        gc.setFont(FONT_PILL);
         gc.setTextAlign(TextAlignment.CENTER);
-        gc.setFont(FONT_SMALL);
 
         for (int t = 0; t < 6; t++) {
-            double px = startX + t * (pillW + gap);
-            boolean active = (t == activeTState);
-            gc.setFill(active ? TSTATE_ACTIVE : CARD_FILL);
-            gc.fillRoundRect(px, y, pillW, pillH, 5, 5);
-            gc.setStroke(active ? WIRE_DRIVER : CARD_BORDER);
-            gc.setLineWidth(active ? 1.6 : 1.0);
-            gc.strokeRoundRect(px, y, pillW, pillH, 5, 5);
-
-            gc.setFill(active ? Color.WHITE : TEXT_MUTED);
-            gc.fillText("T" + t, px + pillW * 0.5, y + 15.0);
+            double px = ROW_LABEL_W + t * (pillW + gap);
+            boolean active = t == activeTState;
+            if (active) {
+                gc.setFill(Theme.BLUE_EMPH);
+                gc.fillRoundRect(px, y - pillH / 2, pillW, pillH, pillH, pillH);
+            } else {
+                gc.setStroke(Theme.LINE);
+                gc.setLineWidth(1.0);
+                gc.strokeRoundRect(px + 0.5, y - pillH / 2 + 0.5, pillW - 1, pillH - 1, pillH, pillH);
+            }
+            gc.setFill(active ? Color.WHITE : Theme.FAINT);
+            gc.fillText("T" + t, px + pillW / 2, y);
         }
     }
 
     private void drawControlWiresRow(GraphicsContext gc, double width, double y, int ctrl) {
+        drawRowLabel(gc, "Control word", y);
         int count = ControlSignals.ALL_SIGNALS.size();
-        double availW = width - 24.0;
-        double gap = 3.0;
-        double badgeW = Math.max(22.0, (availW - (count - 1) * gap) / count);
-        double badgeH = 20.0;
-        double startX = (width - (count * badgeW + (count - 1) * gap)) * 0.5;
-
+        double gap = 4.0;
+        double chipW = Math.min(36.0, (width - ROW_LABEL_W - (count - 1) * gap) / count);
+        double chipH = 20.0;
+        gc.setFont(FONT_CHIP);
         gc.setTextAlign(TextAlignment.CENTER);
-        gc.setFont(FONT_SMALL);
 
         for (int i = 0; i < count; i++) {
             SignalSpec spec = ControlSignals.ALL_SIGNALS.get(i);
-            double bx = startX + i * (badgeW + gap);
+            double bx = ROW_LABEL_W + i * (chipW + gap);
             boolean active = (ctrl & spec.mask()) != 0;
-            Color activeColor = spec.busDriver() ? WIRE_DRIVER : WIRE_CONSUMER;
+            Color role = spec.busDriver() ? Theme.BLUE : Theme.GREEN;
 
-            gc.setFill(active ? Color.web("#162936") : CARD_FILL);
-            gc.fillRoundRect(bx, y, badgeW, badgeH, 4, 4);
-            gc.setStroke(active ? activeColor : WIRE_IDLE);
-            gc.setLineWidth(active ? 1.6 : 1.0);
-            gc.strokeRoundRect(bx, y, badgeW, badgeH, 4, 4);
-
-            gc.setFill(active ? activeColor : TEXT_MUTED);
-            gc.fillText(spec.name(), bx + badgeW * 0.5, y + 14.0);
+            if (active) {
+                gc.setFill(spec.busDriver() ? Theme.BLUE_SOFT : Theme.GREEN_SOFT);
+                gc.fillRoundRect(bx, y - chipH / 2, chipW, chipH, chipH, chipH);
+            }
+            gc.setStroke(active ? role : Theme.LINE);
+            gc.setLineWidth(1.0);
+            gc.strokeRoundRect(bx + 0.5, y - chipH / 2 + 0.5, chipW - 1, chipH - 1, chipH, chipH);
+            gc.setFill(active ? role : Theme.FAINT);
+            gc.fillText(spec.name(), bx + chipW / 2, y);
         }
+    }
+
+    private static void drawRowLabel(GraphicsContext gc, String text, double y) {
+        gc.setFont(FONT_TITLE);
+        gc.setTextAlign(TextAlignment.LEFT);
+        gc.setFill(Theme.FAINT);
+        gc.fillText(text, 0, y);
+    }
+
+    private static String dec3(int value) {
+        return String.format("%03d", value & 0xFF);
     }
 
     private static String hex2(int value) {

@@ -13,7 +13,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Diff-updated 16x16 RAM Hex Grid (256 bytes) highlighting current PC (cyan) and MAR (gold).
+ * Diff-updated 16x16 RAM Hex Grid (256 bytes) highlighting current PC (blue) and MAR (yellow).
  */
 public final class RamHexGridView extends GridPane {
 
@@ -49,23 +49,24 @@ public final class RamHexGridView extends GridPane {
                 if (renderedValues[addr] != val) {
                     renderedValues[addr] = val;
                     cellLabels[addr].setText(hex2Plain(val));
+                    Theme.toggleClass(cellLabels[addr], "ram-cell--zero", val == 0);
                 }
             }
         }
 
         if (highlightedPc != maskedPc) {
             if (highlightedPc >= 0 && highlightedPc < 256) {
-                cellLabels[highlightedPc].getStyleClass().remove("ram-cell-pc");
+                cellLabels[highlightedPc].getStyleClass().remove("ram-cell--pc");
             }
-            cellLabels[maskedPc].getStyleClass().add("ram-cell-pc");
+            cellLabels[maskedPc].getStyleClass().add("ram-cell--pc");
             highlightedPc = maskedPc;
         }
 
         if (highlightedMar != maskedMar) {
             if (highlightedMar >= 0 && highlightedMar < 256) {
-                cellLabels[highlightedMar].getStyleClass().remove("ram-cell-mar");
+                cellLabels[highlightedMar].getStyleClass().remove("ram-cell--mar");
             }
-            cellLabels[maskedMar].getStyleClass().add("ram-cell-mar");
+            cellLabels[maskedMar].getStyleClass().add("ram-cell--mar");
             highlightedMar = maskedMar;
         }
     }
@@ -128,29 +129,27 @@ public final class RamHexGridView extends GridPane {
     }
 
     private void buildGrid() {
-        Label corner = new Label("  ");
-        corner.getStyleClass().add("section-header");
-        add(corner, 0, 0);
-
         for (int col = 0; col < 16; col++) {
-            Label colHdr = new Label(hex2Plain(col));
-            colHdr.getStyleClass().add("section-header");
+            Label colHdr = new Label(Integer.toHexString(col).toUpperCase(Locale.ROOT));
+            colHdr.getStyleClass().add("ram-grid__header");
             colHdr.setMinWidth(20.0);
+            colHdr.setMaxWidth(Double.MAX_VALUE);
             colHdr.setAlignment(Pos.CENTER);
             add(colHdr, col + 1, 0);
         }
 
         for (int row = 0; row < 16; row++) {
-            Label rowHdr = new Label(hex2Plain(row << 4) + ":");
-            rowHdr.getStyleClass().add("section-header");
+            Label rowHdr = new Label(hex2Plain(row << 4));
+            rowHdr.getStyleClass().add("ram-grid__header");
             rowHdr.setMinWidth(24.0);
             add(rowHdr, 0, row + 1);
 
             for (int col = 0; col < 16; col++) {
                 int addr = (row << 4) | col;
                 Label cell = new Label("00");
-                cell.getStyleClass().add("ram-cell");
+                cell.getStyleClass().addAll("ram-cell", "ram-cell--zero");
                 cell.setMinWidth(20.0);
+                cell.setMaxWidth(Double.MAX_VALUE);
                 cell.setAlignment(Pos.CENTER);
                 cell.setOnMouseClicked(evt -> {
                     if (evt.getClickCount() >= 1 && pokeHandler != null) {

@@ -3,6 +3,7 @@ package dev.frtzhahn.micro8.ui;
 import dev.frtzhahn.micro8.db.SnapshotRepository;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.VPos;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -61,10 +62,10 @@ public final class OnboardingController {
             new SlideSpec(
                     2,
                     "Slide 2 - 8-Bit System Bus & 17 Control Wires (Single-Driver Law)",
-                    "Only 5 lines drive the shared 8-bit bus (RO, AO, BO, EO, CO in cyan). "
+                    "Only 5 lines drive the shared 8-bit bus (RO, AO, BO, EO, CO in blue). "
                             + "The other 12 lines latch data or control sequencing (green). IR holds only the opcode, so no IO wire exists.",
                     List.of(
-                            "5 BUS DRIVERS (CYAN - MAX 1 ACTIVE PER T-STATE):",
+                            "5 BUS DRIVERS (BLUE - MAX 1 ACTIVE PER T-STATE):",
                             "  RO (RAM Out) | AO (RegA Out) | BO (RegB Out) | EO (ALU Out) | CO (PC Out)",
                             "12 LATCH / SEQUENCER WIRES (GREEN):",
                             "  HLT, MI, RI, II, AI, BI, SU (2's Comp Sub), OI, CE, J, FI, CLR",
@@ -203,34 +204,27 @@ public final class OnboardingController {
         if (Platform.isFxApplicationThread()) {
             Canvas canvas = new Canvas(SLIDE_WIDTH, SLIDE_HEIGHT);
             GraphicsContext gc = canvas.getGraphicsContext2D();
-            gc.setFill(Color.web("#111318"));
+            gc.setFill(Theme.SURFACE);
             gc.fillRect(0, 0, SLIDE_WIDTH, SLIDE_HEIGHT);
 
-            gc.setStroke(Color.web("#00E5FF"));
-            gc.setLineWidth(2.0);
-            gc.strokeRoundRect(12, 12, SLIDE_WIDTH - 24, SLIDE_HEIGHT - 24, 10, 10);
-
-            gc.setFill(Color.web("#1A1D24"));
-            gc.fillRoundRect(28, 28, SLIDE_WIDTH - 56, 54, 8, 8);
-            gc.setStroke(Color.web("#2A2F3A"));
-            gc.setLineWidth(1.0);
-            gc.strokeRoundRect(28, 28, SLIDE_WIDTH - 56, 54, 8, 8);
-
-            gc.setFill(Color.web("#00E5FF"));
-            gc.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-            gc.fillText(spec.title(), 44, 60);
+            gc.setTextBaseline(VPos.CENTER);
+            gc.setFill(Theme.TEXT);
+            gc.setFont(Font.font(Theme.SANS, FontWeight.BOLD, 16));
+            gc.fillText(spec.title(), 28, 40);
 
             List<String> lines = spec.calloutLines();
-            double y = 112;
+            double y = 76;
             for (int i = 0; i < lines.size(); i++) {
-                gc.setFill(Color.web("#1A1D24"));
-                gc.fillRoundRect(36, y, SLIDE_WIDTH - 72, 46, 6, 6);
-                gc.setStroke(i == 0 ? Color.web("#FFD54F") : Color.web("#00E676"));
-                gc.strokeRoundRect(36, y, SLIDE_WIDTH - 72, 46, 6, 6);
+                boolean header = i == 0;
+                gc.setFill(header ? Theme.BLUE_SOFT : Theme.BG);
+                gc.fillRoundRect(28, y, SLIDE_WIDTH - 56, 46, 12, 12);
+                gc.setStroke(header ? Theme.BLUE : Theme.LINE_STRONG);
+                gc.setLineWidth(1.0);
+                gc.strokeRoundRect(28.5, y + 0.5, SLIDE_WIDTH - 57, 45, 12, 12);
 
-                gc.setFill(i == 0 ? Color.web("#FFD54F") : Color.web("#E2E8F0"));
-                gc.setFont(Font.font("Monospace", FontWeight.BOLD, 13));
-                gc.fillText(lines.get(i), 52, y + 28);
+                gc.setFill(header ? Theme.BLUE : Theme.TEXT);
+                gc.setFont(Font.font(Theme.MONO, 13));
+                gc.fillText(lines.get(i), 44, y + 23);
                 y += 58;
             }
 
@@ -241,7 +235,7 @@ public final class OnboardingController {
 
         WritableImage fallback = new WritableImage(SLIDE_WIDTH, SLIDE_HEIGHT);
         PixelWriter pw = fallback.getPixelWriter();
-        Color bg = Color.web("#111318");
+        Color bg = Theme.SURFACE;
         for (int y = 0; y < SLIDE_HEIGHT; y++) {
             for (int x = 0; x < SLIDE_WIDTH; x++) {
                 pw.setColor(x, y, bg);
