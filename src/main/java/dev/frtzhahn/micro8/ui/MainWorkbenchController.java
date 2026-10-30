@@ -52,6 +52,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.web.WebView;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -61,7 +62,11 @@ import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -112,6 +117,12 @@ public final class MainWorkbenchController {
 
     @FXML
     private Button btnNewBlank;
+
+    @FXML
+    private Button btnQuickSave;
+
+    @FXML
+    private Button btnExportAsm;
 
     @FXML
     private Button btnAssemble;
@@ -306,6 +317,7 @@ public final class MainWorkbenchController {
     private final CpuCore cpuCore = new CpuCore();
     private final CpuClockRunner clockRunner = new CpuClockRunner(cpuCore);
     private final Assembler assembler = new Assembler();
+    private String activeSnapshotName;
 
     private byte[] lastAssembledRam = new byte[256];
     private boolean programAssembled;
@@ -387,6 +399,9 @@ public final class MainWorkbenchController {
                 event.consume();
             } else if (event.isControlDown() && event.getCode() == KeyCode.N) {
                 handleNewBlank();
+                event.consume();
+            } else if (event.isControlDown() && event.getCode() == KeyCode.S) {
+                handleQuickSave();
                 event.consume();
             }
         });
@@ -993,9 +1008,93 @@ public final class MainWorkbenchController {
             cpuCore.wipeCleanSlate();
             snap = cpuCore.createSnapshot();
         }
+        this.activeSnapshotName = null;
         renderSnapshot(snap);
         syncTransportControls();
         showDiagnosticsSuccess("Initialized new blank sandbox workspace.");
+    }
+
+    @FXML
+    public void handleQuickSave() {
+        clockRunner.pause();
+        if (snapshotRepository == null) {
+            showDiagnosticsError("Snapshot repository is not initialized.");
+            return;
+        }
+
+        if (activeSnapshotName == null || activeSnapshotName.isBlank()) {
+            TextInputDialog dialog = new TextInputDialog("snapshot-1");
+            dialog.setTitle("Quick Save Snapshot");
+            dialog.setHeaderText("Save current workspace into a new Snapshot");
+            dialog.setContentText("Snapshot name:");
+            Optional<String> result = dialog.showAndWait();
+            if (result.isEmpty()) {
+                return;
+            }
+            String chosen = result.get().trim();
+            if (chosen.isEmpty()) {
+                showDiagnosticsError("Snapshot name must not be empty.");
+                return;
+            }
+            try {
+                boolean overwrite = false;
+                if (snapshotRepository.existsByName(chosen)) {
+                    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+                    confirm.setTitle("Overwrite Workspace Snapshot");
+                    confirm.setHeaderText("Snapshot '" + chosen + "' already exists.");
+                    confirm.setContentText("Do you want to overwrite the existing snapshot?");
+                    Optional<ButtonType> choice = confirm.showAndWait();
+                    if (choice.isEmpty() || choice.get() != ButtonType.OK) {
+                        return;
+                    }
+                    overwrite = true;
+                }
+                String asmText = codeAsmEditor == null ? "" : codeAsmEditor.getText();
+                WorkspaceSnapshot captured = snapshotRepository.captureFromCpu(chosen, asmText, cpuCore);
+                snapshotRepository.saveSnapshot(captured, overwrite);
+                this.activeSnapshotName = chosen;
+                showDiagnosticsSuccess("Snapshot '" + chosen + "' saved.");
+            } catch (SQLException | IllegalArgumentException | IllegalStateException ex) {
+                showDiagnosticsError("Save error: " + ex.getMessage());
+            }
+        } else {
+            try {
+                String asmText = codeAsmEditor == null ? "" : codeAsmEditor.getText();
+                WorkspaceSnapshot captured = snapshotRepository.captureFromCpu(activeSnapshotName, asmText, cpuCore);
+                snapshotRepository.saveSnapshot(captured, true);
+                showDiagnosticsSuccess("Snapshot '" + activeSnapshotName + "' updated.");
+            } catch (SQLException | IllegalArgumentException | IllegalStateException ex) {
+                showDiagnosticsError("Save error: " + ex.getMessage());
+            }
+        }
+    }
+
+    @FXML
+    public void handleExportAsm() {
+        if (codeAsmEditor == null) {
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Export Assembly Source");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Assembly Files (*.asm)", "*.asm"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+        String defaultName = (activeSnapshotName != null && !activeSnapshotName.isBlank())
+                ? activeSnapshotName
+                : "program";
+        chooser.setInitialFileName(defaultName + ".asm");
+
+        Window owner = btnExportAsm == null || btnExportAsm.getScene() == null
+                ? null
+                : btnExportAsm.getScene().getWindow();
+        File file = chooser.showSaveDialog(owner);
+        if (file != null) {
+            try {
+                Files.writeString(file.toPath(), codeAsmEditor.getText(), StandardCharsets.UTF_8);
+                showDiagnosticsSuccess("Exported source to " + file.getName());
+            } catch (IOException ex) {
+                showDiagnosticsError("Failed to export: " + ex.getMessage());
+            }
+        }
     }
 
     @FXML
@@ -1658,6 +1757,7 @@ public final class MainWorkbenchController {
                 String asmText = codeAsmEditor == null ? "" : codeAsmEditor.getText();
                 WorkspaceSnapshot captured = snapshotRepository.captureFromCpu(rawName, asmText, cpuCore);
                 snapshotRepository.saveSnapshot(captured, allowOverwrite);
+                this.activeSnapshotName = rawName;
                 refreshSnapshotList(snapshotItems);
                 String msg = "Saved workspace snapshot '" + rawName + "'.";
                 lblStatus.setText(msg);
@@ -1689,6 +1789,7 @@ public final class MainWorkbenchController {
             snapshotRepository.restoreIntoCpu(selected, cpuCore);
             this.lastAssembledRam = selected.ramBlob();
             this.programAssembled = true;
+            this.activeSnapshotName = selected.name();
             traceItems.clear();
 
             CpuSnapshot snap;
@@ -1702,6 +1803,42 @@ public final class MainWorkbenchController {
             showDiagnosticsSuccess(msg);
         });
 
+        Button btnRename = new Button("Rename Selected");
+        btnRename.setOnAction(e -> {
+            WorkspaceSnapshot selected = tblSnapshots.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                lblStatus.setText("Select a snapshot from the table to rename.");
+                return;
+            }
+            TextInputDialog renameDialog = new TextInputDialog(selected.name());
+            renameDialog.setTitle("Rename Workspace Snapshot");
+            renameDialog.setHeaderText("Enter new name for snapshot '" + selected.name() + "':");
+            renameDialog.setContentText("New name:");
+            Optional<String> result = renameDialog.showAndWait();
+            result.ifPresent(rawNewName -> {
+                String cleanNew = rawNewName.trim();
+                if (cleanNew.isEmpty()) {
+                    lblStatus.setText("Snapshot name must not be empty.");
+                    return;
+                }
+                if (cleanNew.equals(selected.name())) {
+                    return;
+                }
+                try {
+                    snapshotRepository.renameSnapshot(selected.name(), cleanNew);
+                    if (selected.name().equals(activeSnapshotName)) {
+                        activeSnapshotName = cleanNew;
+                    }
+                    refreshSnapshotList(snapshotItems);
+                    String msg = "Renamed snapshot '" + selected.name() + "' to '" + cleanNew + "'.";
+                    lblStatus.setText(msg);
+                    showDiagnosticsSuccess(msg);
+                } catch (SQLException | IllegalArgumentException ex) {
+                    lblStatus.setText("Rename error: " + ex.getMessage());
+                }
+            });
+        });
+
         Button btnDelete = new Button("Delete Selected");
         btnDelete.setOnAction(e -> {
             WorkspaceSnapshot selected = tblSnapshots.getSelectionModel().getSelectedItem();
@@ -1711,6 +1848,9 @@ public final class MainWorkbenchController {
             }
             try {
                 snapshotRepository.deleteSnapshot(selected.name());
+                if (selected.name().equals(activeSnapshotName)) {
+                    activeSnapshotName = null;
+                }
                 refreshSnapshotList(snapshotItems);
                 lblStatus.setText("Deleted snapshot '" + selected.name() + "'.");
             } catch (SQLException ex) {
@@ -1721,7 +1861,7 @@ public final class MainWorkbenchController {
         HBox topRow = new HBox(8.0, new Label("Snapshot Name:"), txtName, btnSave);
         topRow.setAlignment(Pos.CENTER_LEFT);
 
-        HBox bottomRow = new HBox(8.0, btnRestore, btnDelete);
+        HBox bottomRow = new HBox(8.0, btnRestore, btnRename, btnDelete);
         bottomRow.setAlignment(Pos.CENTER_RIGHT);
 
         VBox root = new VBox(10.0, topRow, tblSnapshots, lblStatus, bottomRow);
