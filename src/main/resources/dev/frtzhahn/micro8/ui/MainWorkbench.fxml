@@ -111,15 +111,19 @@
                     <FontIcon iconLiteral="fth-code"/>
                     <Label text="Assembly" styleClass="panel__title"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="btnNewBlank" text="New Blank" styleClass="button--outline" onAction="#handleNewBlank">
+                    <Button fx:id="btnNewBlank" styleClass="button--icon, button--sm" onAction="#handleNewBlank">
                         <graphic><FontIcon iconLiteral="fth-file-plus"/></graphic>
                         <tooltip><Tooltip text="New blank sandbox workspace (Ctrl+N)"/></tooltip>
                     </Button>
-                    <Button fx:id="btnQuickSave" text="Save" styleClass="button--outline" onAction="#handleQuickSave">
+                    <Button fx:id="btnSaveWorkspace" styleClass="button--icon, button--sm" onAction="#handleQuickSave">
                         <graphic><FontIcon iconLiteral="fth-save"/></graphic>
                         <tooltip><Tooltip text="Quick Save Snapshot (Ctrl+S)"/></tooltip>
                     </Button>
-                    <Button fx:id="btnExportAsm" text="Export" styleClass="button--outline" onAction="#handleExportAsm">
+                    <Button fx:id="btnImportAsm" styleClass="button--icon, button--sm" onAction="#handleImportAsm">
+                        <graphic><FontIcon iconLiteral="fth-upload"/></graphic>
+                        <tooltip><Tooltip text="Import .asm File (Ctrl+O)"/></tooltip>
+                    </Button>
+                    <Button fx:id="btnExportAsm" styleClass="button--icon, button--sm" onAction="#handleExportAsm">
                         <graphic><FontIcon iconLiteral="fth-download"/></graphic>
                         <tooltip><Tooltip text="Export Editor to .asm File"/></tooltip>
                     </Button>
