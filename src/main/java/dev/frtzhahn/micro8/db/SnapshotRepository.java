@@ -167,6 +167,33 @@ public final class SnapshotRepository {
         }
     }
 
+    public void renameSnapshot(String oldName, String newName) throws SQLException {
+        if (oldName == null || oldName.isBlank()) {
+            throw new IllegalArgumentException("Old snapshot name must not be blank");
+        }
+        if (newName == null || newName.isBlank()) {
+            throw new IllegalArgumentException("New snapshot name must not be blank");
+        }
+        String cleanOld = oldName.trim();
+        String cleanNew = newName.trim();
+        if (cleanOld.equals(cleanNew)) {
+            return;
+        }
+        if (existsByName(cleanNew)) {
+            throw new IllegalArgumentException("Snapshot '" + cleanNew + "' already exists");
+        }
+        if (!existsByName(cleanOld)) {
+            throw new IllegalArgumentException("Snapshot '" + cleanOld + "' does not exist");
+        }
+        String sql = "UPDATE workspace_snapshots SET name = ? WHERE name = ?;";
+        try (Connection conn = dbManager.openConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, cleanNew);
+            ps.setString(2, cleanOld);
+            ps.executeUpdate();
+        }
+    }
+
     public WorkspaceSnapshot captureFromCpu(String name, String assemblySource, CpuCore cpu) {
         Objects.requireNonNull(cpu, "cpu must not be null");
         synchronized (cpu) {
