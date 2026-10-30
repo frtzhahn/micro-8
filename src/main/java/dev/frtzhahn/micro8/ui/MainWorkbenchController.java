@@ -93,6 +93,15 @@ public final class MainWorkbenchController {
                 DB 18
             """;
 
+    private static final String BLANK_SANDBOX_PROGRAM = """
+            ; Freeform Sandbox Workspace
+            START:
+                NOP
+                HLT
+
+                ORG 0xF0
+            """;
+
     private static final Pattern TOKEN_PATTERN = Pattern.compile(
             "(?<COMMENT>;[^\\r\\n]*|//[^\\r\\n]*)"
                     + "|(?<LABEL>\\b[A-Za-z_][A-Za-z0-9_]*:)"
@@ -100,6 +109,9 @@ public final class MainWorkbenchController {
                     + "|(?<NUMBER>\\b(?:0[xX][0-9A-Fa-f]+|0[bB][01]+|\\$[0-9A-Fa-f]+|\\d+)\\b)"
                     + "|(?<WORD>\\b[A-Za-z_][A-Za-z0-9_]*\\b)"
     );
+
+    @FXML
+    private Button btnNewBlank;
 
     @FXML
     private Button btnAssemble;
@@ -372,6 +384,9 @@ public final class MainWorkbenchController {
                 event.consume();
             } else if (event.isControlDown() && event.getCode() == KeyCode.R) {
                 handleReset();
+                event.consume();
+            } else if (event.isControlDown() && event.getCode() == KeyCode.N) {
+                handleNewBlank();
                 event.consume();
             }
         });
@@ -948,6 +963,42 @@ public final class MainWorkbenchController {
     }
 
     @FXML
+    public void handleNewBlank() {
+        clockRunner.pause();
+        boolean proceed = promptSaveSnapshotBeforeDestructiveAction(
+                "Starting a new blank workspace will wipe all 256 bytes of RAM, registers, flags, and DeltaJournal."
+        );
+        if (!proceed) {
+            return;
+        }
+        if (codeAsmEditor != null) {
+            codeAsmEditor.replaceText(BLANK_SANDBOX_PROGRAM);
+        }
+        Arrays.fill(addressToSourceLine, -1);
+        highlightEditorLine(-1);
+        Arrays.fill(lastAssembledRam, (byte) 0);
+        programAssembled = false;
+        traceItems.clear();
+        labResultItems.clear();
+        if (tblSymbolTable != null) {
+            tblSymbolTable.getItems().clear();
+        }
+        if (tblLabs != null) {
+            tblLabs.getSelectionModel().clearSelection();
+        }
+        showLabReportSuccess("Select a lab challenge to begin.");
+
+        CpuSnapshot snap;
+        synchronized (cpuCore) {
+            cpuCore.wipeCleanSlate();
+            snap = cpuCore.createSnapshot();
+        }
+        renderSnapshot(snap);
+        syncTransportControls();
+        showDiagnosticsSuccess("Initialized new blank sandbox workspace.");
+    }
+
+    @FXML
     public void handleAssemble() {
         clockRunner.pause();
         if (codeAsmEditor == null) {
@@ -980,7 +1031,7 @@ public final class MainWorkbenchController {
             tblSymbolTable.setItems(FXCollections.observableArrayList(program.symbolTable()));
         }
 
-        showDiagnosticsSuccess("Assembled " + program.emittedByteCount() + " bytes · " + program.symbolTable().size() + " symbols");
+        showDiagnosticsSuccess("Assembled " + program.emittedByteCount() + " bytes | " + program.symbolTable().size() + " symbols");
         renderSnapshot(snap);
         syncTransportControls();
     }
