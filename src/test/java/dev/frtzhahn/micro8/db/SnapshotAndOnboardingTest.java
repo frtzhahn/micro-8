@@ -103,4 +103,37 @@ class SnapshotAndOnboardingTest {
         assertTrue(snapshotRepo.deleteSnapshot("lab-checkpoint"));
         assertFalse(snapshotRepo.existsByName("lab-checkpoint"));
     }
+
+    @Test
+    void renamesSnapshotAndRejectsDuplicateOrInvalidNames(@TempDir Path tempDir) throws SQLException {
+        DatabaseManager dbManager = new DatabaseManager(tempDir.resolve("micro8-rename.db"));
+        IsaRepository isaRepo = new IsaRepository(dbManager);
+        isaRepo.initializeSchemaAndSeed();
+
+        SnapshotRepository snapshotRepo = new SnapshotRepository(dbManager);
+        CpuCore cpu = new CpuCore();
+        cpu.setRegA(42);
+
+        WorkspaceSnapshot alpha = snapshotRepo.captureFromCpu("snap-alpha", "NOP\n", cpu);
+        WorkspaceSnapshot beta = snapshotRepo.captureFromCpu("snap-beta", "HLT\n", cpu);
+        snapshotRepo.saveSnapshot(alpha, false);
+        snapshotRepo.saveSnapshot(beta, false);
+
+        assertTrue(snapshotRepo.existsByName("snap-alpha"));
+        assertTrue(snapshotRepo.existsByName("snap-beta"));
+
+        snapshotRepo.renameSnapshot("snap-alpha", "snap-charlie");
+        assertFalse(snapshotRepo.existsByName("snap-alpha"));
+        assertTrue(snapshotRepo.existsByName("snap-charlie"));
+
+        Optional<WorkspaceSnapshot> charlieOpt = snapshotRepo.findByName("snap-charlie");
+        assertTrue(charlieOpt.isPresent());
+        assertEquals(42, charlieOpt.get().regA());
+        assertEquals("NOP\n", charlieOpt.get().assemblySource());
+
+        assertThrows(IllegalArgumentException.class, () -> snapshotRepo.renameSnapshot("snap-charlie", "snap-beta"));
+        assertThrows(IllegalArgumentException.class, () -> snapshotRepo.renameSnapshot("snap-charlie", ""));
+        assertThrows(IllegalArgumentException.class, () -> snapshotRepo.renameSnapshot("snap-charlie", "   "));
+        assertThrows(IllegalArgumentException.class, () -> snapshotRepo.renameSnapshot("non-existent", "snap-delta"));
+    }
 }
