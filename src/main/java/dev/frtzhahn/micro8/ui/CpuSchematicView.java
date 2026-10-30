@@ -112,30 +112,30 @@ public final class CpuSchematicView extends Pane {
 
         drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 0), blockW, blockH, busX, true,
                 "PC", hex2(s == null ? 0 : s.pc()), dec3(s == null ? 0 : s.pc()), "CO CE J",
-                (ctrl & CO) != 0, (ctrl & (CE | J)) != 0);
+                (ctrl & CO) != 0, (ctrl & J) != 0, (ctrl & CE) != 0);
         drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 1), blockW, blockH, busX, true,
                 "MAR", hex2(mar), dec3(mar), "MI",
-                false, (ctrl & MI) != 0);
+                false, (ctrl & MI) != 0, false);
         drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 2), blockW, blockH, busX, true,
                 "RAM @ MAR", hex2(ramAtMar), dec3(ramAtMar), "RO RI",
-                (ctrl & RO) != 0, (ctrl & RI) != 0);
+                (ctrl & RO) != 0, (ctrl & RI) != 0, false);
         drawBlock(gc, leftX, rowY(topY, blockH, rowGap, 3), blockW, blockH, busX, true,
                 "IR", hex2(s == null ? 0 : s.ir()), currentMnemonic, "II",
-                false, (ctrl & II) != 0);
+                false, (ctrl & II) != 0, false);
 
         drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 0), blockW, blockH, busX, false,
                 "A", hex2(s == null ? 0 : s.regA()), dec3(s == null ? 0 : s.regA()), "AO AI",
-                (ctrl & AO) != 0, (ctrl & AI) != 0);
+                (ctrl & AO) != 0, (ctrl & AI) != 0, false);
         drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 1), blockW, blockH, busX, false,
-                "ALU · " + ((ctrl & SU) != 0 ? "SUB" : "ADD"), hex2(alu),
+                "ALU - " + ((ctrl & SU) != 0 ? "SUB" : "ADD"), hex2(alu),
                 "Z" + (zFlag ? 1 : 0) + " C" + (cFlag ? 1 : 0), "EO SU FI",
-                (ctrl & EO) != 0, (ctrl & (SU | FI)) != 0);
+                (ctrl & EO) != 0, false, (ctrl & (SU | FI)) != 0);
         drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 2), blockW, blockH, busX, false,
                 "B", hex2(s == null ? 0 : s.regB()), dec3(s == null ? 0 : s.regB()), "BO BI",
-                (ctrl & BO) != 0, (ctrl & BI) != 0);
+                (ctrl & BO) != 0, (ctrl & BI) != 0, false);
         drawBlock(gc, rightX, rowY(topY, blockH, rowGap, 3), blockW, blockH, busX, false,
                 "OUT", hex2(s == null ? 0 : s.outReg()), dec3(s == null ? 0 : s.outReg()), "OI",
-                false, (ctrl & OI) != 0);
+                false, (ctrl & OI) != 0, false);
 
         drawSequencerRow(gc, h - 70.0, s == null ? 0 : s.tState());
         drawControlWiresRow(gc, w, h - 34.0, ctrl);
@@ -158,25 +158,28 @@ public final class CpuSchematicView extends Pane {
             String detail,
             String signals,
             boolean driver,
-            boolean consumer
+            boolean busConsumer,
+            boolean internalActive
     ) {
-        Color role = driver ? Theme.BLUE : (consumer ? Theme.GREEN : null);
+        boolean blockActive = driver || busConsumer || internalActive;
+        Color busRole = driver ? Theme.BLUE : (busConsumer ? Theme.GREEN : null);
+        Color blockRole = driver ? Theme.BLUE : (blockActive ? Theme.GREEN : null);
         Color soft = driver ? Theme.BLUE_SOFT : Theme.GREEN_SOFT;
         double midY = Math.round(y + h * 0.5);
         double edgeX = leftSide ? x + w : x;
 
-        gc.setStroke(role == null ? Theme.LINE_STRONG : role);
-        gc.setLineWidth(role == null ? 1.5 : 2.0);
+        gc.setStroke(busRole == null ? Theme.LINE_STRONG : busRole);
+        gc.setLineWidth(busRole == null ? 1.5 : 2.0);
         gc.strokeLine(edgeX, midY, busX, midY);
         if (driver) {
-            drawArrowHead(gc, busX + (leftSide ? -1.5 : 1.5), midY, leftSide, role);
-        } else if (consumer) {
-            drawArrowHead(gc, edgeX, midY, !leftSide, role);
+            drawArrowHead(gc, busX + (leftSide ? -1.5 : 1.5), midY, leftSide, busRole);
+        } else if (busConsumer) {
+            drawArrowHead(gc, edgeX, midY, !leftSide, busRole);
         }
 
-        gc.setFill(role == null ? Theme.SURFACE : soft);
+        gc.setFill(blockRole == null ? Theme.SURFACE : soft);
         gc.fillRoundRect(x, y, w, h, 14, 14);
-        gc.setStroke(role == null ? Theme.LINE_STRONG : role);
+        gc.setStroke(blockRole == null ? Theme.LINE_STRONG : blockRole);
         gc.setLineWidth(1.0);
         gc.strokeRoundRect(x + 0.5, y + 0.5, w - 1, h - 1, 14, 14);
 
@@ -188,7 +191,7 @@ public final class CpuSchematicView extends Pane {
 
         gc.setTextAlign(TextAlignment.RIGHT);
         gc.setFont(FONT_CHIP);
-        gc.setFill(role == null ? Theme.FAINT : role);
+        gc.setFill(blockRole == null ? Theme.FAINT : blockRole);
         gc.fillText(signals, x + w - 12, titleY);
 
         double valueY = y + h - 17;
