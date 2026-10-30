@@ -1,5 +1,6 @@
 package dev.frtzhahn.micro8.ui;
 
+import dev.frtzhahn.micro8.asm.AsmSourceFile;
 import dev.frtzhahn.micro8.asm.AssembledProgram;
 import dev.frtzhahn.micro8.asm.Assembler;
 import dev.frtzhahn.micro8.asm.SymbolEntry;
@@ -120,6 +121,12 @@ public final class MainWorkbenchController {
 
     @FXML
     private Button btnQuickSave;
+
+    @FXML
+    private Button btnSaveWorkspace;
+
+    @FXML
+    private Button btnImportAsm;
 
     @FXML
     private Button btnExportAsm;
@@ -337,6 +344,10 @@ public final class MainWorkbenchController {
             });
         }
 
+        if (btnSaveWorkspace != null && btnQuickSave == null) {
+            btnQuickSave = btnSaveWorkspace;
+        }
+
         initSymbolTable();
         initCodeEditor();
         initBinaryLeds();
@@ -394,14 +405,17 @@ public final class MainWorkbenchController {
             } else if (event.getCode() == KeyCode.F10) {
                 handleUndoMacro();
                 event.consume();
-            } else if (event.isControlDown() && event.getCode() == KeyCode.R) {
+            } else if ((event.isControlDown() || event.isShortcutDown()) && event.getCode() == KeyCode.R) {
                 handleReset();
                 event.consume();
-            } else if (event.isControlDown() && event.getCode() == KeyCode.N) {
+            } else if ((event.isControlDown() || event.isShortcutDown()) && event.getCode() == KeyCode.N) {
                 handleNewBlank();
                 event.consume();
-            } else if (event.isControlDown() && event.getCode() == KeyCode.S) {
+            } else if ((event.isControlDown() || event.isShortcutDown()) && event.getCode() == KeyCode.S) {
                 handleQuickSave();
+                event.consume();
+            } else if ((event.isControlDown() || event.isShortcutDown()) && event.getCode() == KeyCode.O) {
+                handleImportAsm();
                 event.consume();
             }
         });
@@ -1070,27 +1084,99 @@ public final class MainWorkbenchController {
     }
 
     @FXML
+    public void handleImportAsm() {
+        clockRunner.pause();
+        boolean proceed = promptSaveSnapshotBeforeDestructiveAction(
+                "Importing an external .asm file will wipe all 256 bytes of RAM, registers, flags, and DeltaJournal."
+        );
+        if (!proceed) {
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Import Assembly Source");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("MICRO-8 Assembly Files (*.asm)", "*.asm")
+        );
+
+        Window owner = btnImportAsm == null || btnImportAsm.getScene() == null
+                ? (btnExportAsm == null || btnExportAsm.getScene() == null ? null : btnExportAsm.getScene().getWindow())
+                : btnImportAsm.getScene().getWindow();
+        File file = chooser.showOpenDialog(owner);
+        if (file == null) {
+            return;
+        }
+
+        String sourceText;
+        try {
+            sourceText = AsmSourceFile.read(file.toPath());
+        } catch (IllegalArgumentException | IOException ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Invalid Assembly File");
+            alert.setHeaderText("Failed to import " + file.getName());
+            alert.setContentText(ex.getMessage());
+            alert.showAndWait();
+            showDiagnosticsError("Import error: " + ex.getMessage());
+            return;
+        }
+
+        if (codeAsmEditor != null) {
+            codeAsmEditor.replaceText(sourceText);
+        }
+        Arrays.fill(addressToSourceLine, -1);
+        highlightEditorLine(-1);
+        Arrays.fill(lastAssembledRam, (byte) 0);
+        programAssembled = false;
+        traceItems.clear();
+        labResultItems.clear();
+        if (tblSymbolTable != null) {
+            tblSymbolTable.getItems().clear();
+        }
+        if (tblLabs != null) {
+            tblLabs.getSelectionModel().clearSelection();
+        }
+        showLabReportSuccess("Select a lab challenge to begin.");
+
+        CpuSnapshot snap;
+        synchronized (cpuCore) {
+            cpuCore.wipeCleanSlate();
+            snap = cpuCore.createSnapshot();
+        }
+        this.activeSnapshotName = null;
+        renderSnapshot(snap);
+        syncTransportControls();
+        showDiagnosticsSuccess("Imported " + file.getName() + " (unsaved, Ctrl+S to snapshot)");
+    }
+
+    @FXML
     public void handleExportAsm() {
         if (codeAsmEditor == null) {
             return;
         }
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Export Assembly Source");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Assembly Files (*.asm)", "*.asm"));
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("MICRO-8 Assembly Files (*.asm)", "*.asm")
+        );
         String defaultName = (activeSnapshotName != null && !activeSnapshotName.isBlank())
                 ? activeSnapshotName
                 : "program";
-        chooser.setInitialFileName(defaultName + ".asm");
+        if (!defaultName.toLowerCase(Locale.ROOT).endsWith(".asm")) {
+            defaultName = defaultName + ".asm";
+        }
+        chooser.setInitialFileName(defaultName);
 
         Window owner = btnExportAsm == null || btnExportAsm.getScene() == null
                 ? null
                 : btnExportAsm.getScene().getWindow();
         File file = chooser.showSaveDialog(owner);
         if (file != null) {
+            File targetFile = file;
+            if (!targetFile.getName().toLowerCase(Locale.ROOT).endsWith(".asm")) {
+                targetFile = new File(targetFile.getParentFile(), targetFile.getName() + ".asm");
+            }
             try {
-                Files.writeString(file.toPath(), codeAsmEditor.getText(), StandardCharsets.UTF_8);
-                showDiagnosticsSuccess("Exported source to " + file.getName());
+                Files.writeString(targetFile.toPath(), codeAsmEditor.getText(), StandardCharsets.UTF_8);
+                showDiagnosticsSuccess("Exported source to " + targetFile.getName());
             } catch (IOException ex) {
                 showDiagnosticsError("Failed to export: " + ex.getMessage());
             }
