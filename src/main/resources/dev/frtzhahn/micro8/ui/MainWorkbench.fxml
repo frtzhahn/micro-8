@@ -110,6 +110,11 @@
                 <HBox styleClass="panel__head">
                     <FontIcon iconLiteral="fth-code"/>
                     <Label text="Assembly" styleClass="panel__title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="btnNewBlank" text="New Blank" styleClass="button--outline" onAction="#handleNewBlank">
+                        <graphic><FontIcon iconLiteral="fth-file-plus"/></graphic>
+                        <tooltip><Tooltip text="New blank sandbox workspace (Ctrl+N)"/></tooltip>
+                    </Button>
                 </HBox>
                 <StackPane fx:id="paneCodeHost" VBox.vgrow="ALWAYS"/>
                 <Region styleClass="rule"/>
