@@ -115,6 +115,14 @@
                         <graphic><FontIcon iconLiteral="fth-file-plus"/></graphic>
                         <tooltip><Tooltip text="New blank sandbox workspace (Ctrl+N)"/></tooltip>
                     </Button>
+                    <Button fx:id="btnQuickSave" text="Save" styleClass="button--outline" onAction="#handleQuickSave">
+                        <graphic><FontIcon iconLiteral="fth-save"/></graphic>
+                        <tooltip><Tooltip text="Quick Save Snapshot (Ctrl+S)"/></tooltip>
+                    </Button>
+                    <Button fx:id="btnExportAsm" text="Export" styleClass="button--outline" onAction="#handleExportAsm">
+                        <graphic><FontIcon iconLiteral="fth-download"/></graphic>
+                        <tooltip><Tooltip text="Export Editor to .asm File"/></tooltip>
+                    </Button>
                 </HBox>
                 <StackPane fx:id="paneCodeHost" VBox.vgrow="ALWAYS"/>
                 <Region styleClass="rule"/>
